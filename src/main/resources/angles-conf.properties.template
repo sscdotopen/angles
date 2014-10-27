@@ -6,5 +6,5 @@ twitter.oAuthAccessTokenSecret=
 angles.dataDir=
 
 jdbc.url=
-jdbc.user=root
+jdbc.user=
 jdbc.password=
