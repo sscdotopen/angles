@@ -1,0 +1,4 @@
+target/*
+*.iml
+.idea/*
+src/main/resources/angles-conf.properties
