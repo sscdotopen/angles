@@ -33,7 +33,6 @@ class CrawlUris extends Step {
     val latestUrls = Storage.expandedUrlsInTweetsSince(since)
 
     log.info("Crawling urls from latest tweets")
-    //val crawler = new Crawler
 
     latestUrls.par foreach { case (statusId, uri) =>
       if (!Storage.alreadyCrawled(statusId, uri)) {
