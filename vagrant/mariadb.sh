@@ -20,22 +20,31 @@ apt-get install -y pwgen
 # prepare for an unattended installation
 export DEBIAN_FRONTEND=noninteractive
 MYSQL_PASS=$(pwgen -s 12 1);
-#MYSQL_VAGRANT_PASS=$(pwgen -s 8 1);
-MYSQL_VAGRANT_PASS=vagrant
+MYSQL_WANGLE_PASS=wangle
 
 debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password password $MYSQL_PASS"
 debconf-set-selections <<< "mariadb-server-5.5 mysql-server/root_password_again password $MYSQL_PASS"
 
 apt-get install -y --allow-unauthenticated mariadb-server mariadb-client
 
-if [ -f $VAGRANT_SYNCED_DIR/vagrant/.mysql-passes ]
+if [ -f $VAGRANT_SYNCED_DIR/vagrant/vagrant/.mysql-passes ]
   then
-    rm -f $VAGRANT_SYNCED_DIR/vagrant/.mysql-passes
+    rm -f $VAGRANT_SYNCED_DIR/vagrant/vagrant/.mysql-passes
 fi
 
-echo "root:${MYSQL_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/.mysql-passes
-echo "vagrant:${MYSQL_VAGRANT_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/.mysql-passes
+echo "root:${MYSQL_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/.mysql-passes
+echo "vagrant:${MYSQL_VAGRANT_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/.mysql-passes
 
-mysql -uroot -p$MYSQL_PASS -e "CREATE USER 'vagrant'@'localhost' IDENTIFIED BY '$MYSQL_VAGRANT_PASS'"
+mysql -uroot -p$MYSQL_PASS -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '$MYSQL_PASS' WITH GRANT OPTION;"
+mysql -uroot -p$MYSQL_PASS -e "CREATE USER 'wangle'@'%' IDENTIFIED BY '$MYSQL_WANGLE_PASS';"
 
 echo "MariaDB Root Passwords has been stored to .mysql-passes in your vagrant directory."
+
+echo "[mysqld]" > /etc/mysql/conf.d/vagrant.cnf
+echo "bind-address = 0.0.0.0" >> /etc/mysql/conf.d/vagrant.cnf
+
+service mysql restart
+
+mysql -uroot -p$MYSQL_PASS < ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/wangle-initial.sql
+
+echo "Database schema wangle has been imported"
