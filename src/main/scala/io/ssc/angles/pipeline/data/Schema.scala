@@ -41,11 +41,12 @@ object Tweet extends SQLSyntaxSupport[Tweet] {
 
   def apply(rs: WrappedResultSet) = {
     new Tweet(rs.long("id"), rs.long("explorer_id"), rs.jodaDateTime("creation_time"), rs.jodaDateTime("fetch_time"),
-              rs.string("json"))
+              rs.string("json"), rs.long("parent_tweet"), rs.boolean("follow_retweets"), rs.int("retweet_count"))
   }
 }
 
-case class Tweet(id: Long, explorerId: Long, creationTime: DateTime, fetchTime: DateTime, json: String) {
+case class Tweet(id: Long, explorerId: Long, creationTime: DateTime, fetchTime: DateTime, json: String, parentTweet: Long,
+                 followRetweets: Boolean, retweetCount: Int) {
   def status(): Status = {
     TwitterObjectFactory.createStatus(json)
   }

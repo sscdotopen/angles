@@ -33,9 +33,9 @@ if [ -f $VAGRANT_SYNCED_DIR/vagrant/vagrant/.mysql-passes ]
 fi
 
 echo "root:${MYSQL_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/.mysql-passes
-echo "vagrant:${MYSQL_VAGRANT_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/.mysql-passes
+echo "vagrant:${MYSQL_WANGLE_PASS}" >> ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/.mysql-passes
 
-mysql -uroot -p$MYSQL_PASS -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '$MYSQL_PASS' WITH GRANT OPTION;"
+mysql -uroot -p$MYSQL_PASS -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'10.%' IDENTIFIED BY '$MYSQL_PASS' WITH GRANT OPTION;"
 mysql -uroot -p$MYSQL_PASS -e "CREATE USER 'wangle'@'%' IDENTIFIED BY '$MYSQL_WANGLE_PASS';"
 
 echo "MariaDB Root Passwords has been stored to .mysql-passes in your vagrant directory."
@@ -43,8 +43,9 @@ echo "MariaDB Root Passwords has been stored to .mysql-passes in your vagrant di
 echo "[mysqld]" > /etc/mysql/conf.d/vagrant.cnf
 echo "bind-address = 0.0.0.0" >> /etc/mysql/conf.d/vagrant.cnf
 
-service mysql restart
-
 mysql -uroot -p$MYSQL_PASS < ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/wangle-initial.sql
+mysql -uroot -p$MYSQL_PASS < ${VAGRANT_SYNCED_DIR}/vagrant/vagrant/wangle-change.sql
 
 echo "Database schema wangle has been imported"
+
+service mysql restart

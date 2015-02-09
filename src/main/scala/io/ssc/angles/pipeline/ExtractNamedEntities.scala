@@ -32,6 +32,8 @@ class ExtractNamedEntities extends Step {
 
   override def execute(since: DateTime): Unit = {
 
+    log.info("Extracing named entities ...")
+
     val websites = Storage.crawledWebsites(since)
 
     websites
@@ -47,12 +49,12 @@ class ExtractNamedEntities extends Step {
       val text = NLPUtils.extractArticle(website.html)
 
       val entities = NamedEntityRecognition.namedEntities(text)
-      log.info("Entites for {}", website.realUri)
+//      log.info("Entites for {}", website.realUri)
       for ((entity, count) <- entities) {
-        log.info("{} {}", entity, count)
+//        log.info("{} {}", entity, count)
         Storage.saveNamedEntity(entity.name, entity.entityType, website.id, count)
       }
-      log.info("")
+//      log.info("")
     }
   }
 }
