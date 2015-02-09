@@ -41,6 +41,8 @@ class IndexArticles extends Step {
 
   def execute(since: DateTime): Unit = {
 
+    log.info("Indexing articles ...")
+
     val now = new DateTime()
 
     val TYPE_STORED_WITH_TERMVECTORS: FieldType = new FieldType()
@@ -125,8 +127,8 @@ class IndexArticles extends Step {
 
       indexWriter.addDocument(document)
 
-      println(website.realUri)
-      println(terms.mkString(" ") + "\n")
+      log.info(website.realUri)
+      log.info(terms.mkString(" "))
     }
 
     indexWriter.close()

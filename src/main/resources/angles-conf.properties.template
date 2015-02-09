@@ -4,6 +4,9 @@ twitter.oAuthAccessToken=
 twitter.oAuthAccessTokenSecret=
 
 angles.dataDir=
+angles.crawlTwitter.sinceDays=5
+angles.extractData.sinceDays=5
+angles.updateStoryIndex.sinceDays=5
 
 jdbc.url=
 jdbc.user=
