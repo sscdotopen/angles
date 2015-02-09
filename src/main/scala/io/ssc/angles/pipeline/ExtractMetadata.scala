@@ -49,6 +49,7 @@ class ExtractMetadata extends Step {
   cleanerProperties.setOmitComments(true)
 
   override def execute(since: DateTime): Unit = {
+    log.info("Extracting metadata ...")
 
     val websites = Storage.crawledWebsites(since)
 
@@ -56,9 +57,12 @@ class ExtractMetadata extends Step {
 
     websites
       .filter { website =>
+        log.debug("Looking at metadata for {}", website.realUri)
         Storage.metadataFor(website.id).isEmpty
       }
       .foreach { website =>
+
+        log.info("Extracting metadata from {}", website.realUri)
 
         val attributes = mutable.Map[String, List[String]]()
 
