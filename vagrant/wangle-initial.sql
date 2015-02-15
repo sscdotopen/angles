@@ -163,8 +163,8 @@ CREATE TABLE `tweets` (
   `creation_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `fetch_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `json` longtext NOT NULL,
-  `parent_tweet` bigint(20) DEFAULT NULL,
-  `follow_retweets` bit(1) DEFAULT b'0',
+  `parent_tweet` bigint(20) DEFAULT -1,
+  `follow_retweets` bit(2) DEFAULT b'0'  COMMENT '0 = unprocessed\n1 = follow\n2 = followed\n3 = uninteresting',
   `retweet_count` int(7) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -210,4 +210,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-06  7:10:17
+SET GLOBAL wait_timeout = 1000;

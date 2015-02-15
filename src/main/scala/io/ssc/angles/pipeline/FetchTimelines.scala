@@ -18,6 +18,7 @@
 
 package io.ssc.angles.pipeline
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import io.ssc.angles.pipeline.data.{Storage, TwitterApi}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -32,6 +33,7 @@ class FetchTimelines extends Step {
   val pageSize = 100
 
   override def execute(since: DateTime): Unit = {
+    log.info("Fetching timelines ...")
 
     val twitterApi = TwitterApi.connect()
 
@@ -57,9 +59,13 @@ class FetchTimelines extends Step {
 
         var tweetsAdded = 0
         for (status <- statuses) {
-          val saved = Storage.saveTweet(status, explorer.id, fetchTime)
-          if (saved) {
-            tweetsAdded += 1
+          try {
+            val saved = Storage.saveTweet(status, explorer.id, fetchTime, None)
+            if (saved) {
+              tweetsAdded += 1
+            }
+          } catch {
+            case _: MySQLIntegrityConstraintViolationException => log.warn("Error while saving retweet, duplicate?")
           }
         }
 

@@ -55,6 +55,7 @@ class CrawlUris extends Step {
             log.warn("Nothing found")
         }
       }
+        Storage.markTweetCrawled(statusId)
     }
   }
 
