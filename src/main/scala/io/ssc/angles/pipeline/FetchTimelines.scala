@@ -26,13 +26,13 @@ import twitter4j.{Paging, ResponseList, Status}
 
 import scala.collection.JavaConversions._
 
-class FetchTimelines extends Step {
+class FetchTimelines {
 
   val log = LoggerFactory.getLogger(classOf[FetchTimelines])
 
   val pageSize = 100
 
-  override def execute(since: DateTime): Unit = {
+  def generateSteps(since: DateTime): Set[Step] = {
     log.info("Fetching timelines ...")
 
     val twitterApi = TwitterApi.connect()
@@ -42,40 +42,45 @@ class FetchTimelines extends Step {
 
     val fetchTime = DateTime.now()
 
+    var steps = Set.empty[Step]
     for (explorer <- explorers) {
-      var statuses: ResponseList[Status] = null
-      var page = 1
 
-      do {
+      steps += new Step {
+        override def execute(since: DateTime): Unit = {
 
-        val paging = if (maxTweetIdPerExplorer.contains(explorer.id)) {
-          new Paging(page, pageSize, maxTweetIdPerExplorer(explorer.id))
-        } else {
-          new Paging(page, pageSize)
-        }
+          var statuses: ResponseList[Status] = null
+          var page = 1
 
-        log.info("Requesting page  {} of @{}", page, explorer.screenname)
-        statuses = twitterApi.timelines().getUserTimeline(explorer.id, paging)
+          do {
 
-        var tweetsAdded = 0
-        for (status <- statuses) {
-          try {
-            val saved = Storage.saveTweet(status, explorer.id, fetchTime, None)
-            if (saved) {
-              tweetsAdded += 1
+            val paging = if (maxTweetIdPerExplorer.contains(explorer.id)) {
+              new Paging(page, pageSize, maxTweetIdPerExplorer(explorer.id))
+            } else {
+              new Paging(page, pageSize)
             }
-          } catch {
-            case _: MySQLIntegrityConstraintViolationException => log.warn("Error while saving retweet, duplicate?")
-          }
+
+            log.info("Requesting page  {} of @{}", page, explorer.screenname)
+            statuses = twitterApi.timelines().getUserTimeline(explorer.id, paging)
+
+            var tweetsAdded = 0
+            for (status <- statuses) {
+              try {
+                val saved = Storage.saveTweet(status, explorer.id, fetchTime, None)
+                if (saved) {
+                  tweetsAdded += 1
+                }
+              } catch {
+                case _: MySQLIntegrityConstraintViolationException => log.warn("Error while saving retweet, duplicate?")
+              }
+            }
+
+            log.info("Saved {} tweets", tweetsAdded)
+            page += 1
+
+          } while (statuses.size == pageSize)
         }
-
-        log.info("Saved {} tweets", tweetsAdded)
-        page += 1
-
-      } while (statuses.size == pageSize)
+      }
     }
-
+    steps
   }
-
-
 }

@@ -20,11 +20,10 @@ package io.ssc.angles.pipeline.data
 
 import io.ssc.angles.Config
 import io.ssc.data._
-import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import scalikejdbc._
-import twitter4j.{Status, TwitterObjectFactory, User}
-
+import twitter4j.{User, TwitterObjectFactory, Status}
+import org.joda.time.DateTime
 import scala.collection.mutable
 ;
 
@@ -115,7 +114,7 @@ object Storage {
 
     var count = 0
     Iterator.continually {
-      val result = (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since} LIMIT 500 OFFSET ${count}" map {
+      val result = (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since} LIMIT 2000 OFFSET ${count}" map {
         CrawledWebsite(_)
       }).list().apply()
       val length = result.length
