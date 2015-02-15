@@ -1,5 +1,6 @@
 package io.ssc.angles.pipeline
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import io.ssc.angles.pipeline.data.{Storage, TwitterApi}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -24,11 +25,19 @@ class FetchExplorers extends Step {
     if (userIds.length == 0)
       return
 
-    val explorers: ResponseList[User]  = twitterApi.users().lookupUsers(userIds)
+    userIds
+      .grouped(100)
+      .foreach { case users =>
+        val explorers: ResponseList[User] = twitterApi.users().lookupUsers(users)
 
-    for (explorer: User <- explorers) {
-      Storage.saveExplorer(explorer)
-      log.info("Fetched {}", explorer.getScreenName)
-    }
+        for (explorer: User <- explorers) {
+          try {
+            Storage.saveExplorer(explorer)
+            log.info("Fetched {}", explorer.getScreenName)
+          } catch {
+            case _: MySQLIntegrityConstraintViolationException => log.info("Error while saving explorer, duplicate?")
+          }
+        }
+      }
   }
 }

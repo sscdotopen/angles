@@ -28,12 +28,13 @@ import scala.collection.mutable.Queue
 object CrawlTwitter extends App {
   val log = LoggerFactory.getLogger(UpdateStoryIndex.getClass)
 
+  val since = new DateTime().minusDays(Config.property("angles.crawlTwitter.sinceDays").toInt)
   val work = new Queue[Step]()
   work.enqueue(new FetchRetweets)
   work.enqueue(new FetchExplorers)
-  work.enqueue(new FetchTimelines)
+  new FetchTimelines().generateSteps(since).foreach { step => work.enqueue(step)}
 
-  val since = new DateTime().minusDays(Config.property("angles.crawlTwitter.sinceDays").toInt)
+
   do {
     try {
       val step = work.front
