@@ -6,7 +6,11 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"code.google.com/p/go-uuid/uuid"
 
@@ -18,48 +22,74 @@ const (
 )
 
 func main() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	signal.Notify(sig, syscall.SIGTERM)
+
 	db := initDb()
+	defer db.close()
 
-	log.Println("Fetching tweets")
+	for {
+		db.setup()
+		log.Println("Fetching tweets")
 
-	uris := db.getUncrawledUris()
-	done := make(chan struct{})
+		uris := db.getUncrawledUris()
+		quit := make(chan struct{})
+		done := make(chan struct{})
 
-	for i := 0; i < numWorkers; i++ {
-		go func() {
-			for {
-				uri, ok := <-uris
+		for i := 0; i < numWorkers; i++ {
+			go func() {
+				for {
+					select {
+					case <-quit:
+						return
+					case uri, ok := <-uris:
+						if !ok {
+							done <- struct{}{}
+							return
+						}
 
-				if !ok {
-					break
+						log.Println("Fetching", uri)
+						resp, err := http.Head(uri)
+
+						var realURI string
+						if err != nil {
+							log.Println(err)
+							realURI = "INVALID"
+						} else {
+							func() {
+								defer resp.Body.Close()
+								realURI = resp.Request.URL.String()
+								log.Println("Fetched", realURI)
+							}()
+						}
+						db.storeRealURI(uri, realURI)
+					}
 				}
+			}()
+		}
 
-				log.Println("Fetching", uri)
-				resp, err := http.Head(uri)
-
-				var realURI string
-				if err != nil {
-					log.Println(err)
-					realURI = "INVALID"
-				} else {
-					func() {
-						defer resp.Body.Close()
-						realURI = resp.Request.URL.String()
-						log.Println("Fetched", realURI)
-					}()
-				}
-				db.storeRealURI(uri, realURI)
+		for i := 0; i < numWorkers; i++ {
+			select {
+			case <-done:
+				// worker exited cleanly
+				continue
+			case s := <-sig:
+				// SIGTERM or SIGINT received
+				log.Println("Received", s)
+				// log.Println("WARNING: Temporary table", db.tempTable, "still exists. Merge has to be done manually.")
+				// log.Printf("Run r.db('angles').table('tweetedUris').insert(r.db('angles').table('%s').eqJoin('uri', r.db('angles').table('tweetedUris'), {index: 'uri'}).zip(), {conflict:'replace'}) on the RethinkDB console.\n", db.tempTable)
+				db.merge()
+				db.cleanup()
+				return
 			}
-			done <- struct{}{}
-		}()
-	}
+		}
 
-	for i := 0; i < numWorkers; i++ {
-		<-done
+		db.merge()
+		db.cleanup()
+		log.Println("Done. Save to exit now. Sleeping a minute before next run.")
+		time.Sleep(time.Minute)
 	}
-
-	db.close()
-	log.Println("Done.")
 }
 
 type db struct {
@@ -82,19 +112,23 @@ func initDb() *db {
 
 	session.Use("angles")
 
-	// create temporary table to hold results
-	tempTable := strings.Replace(uuid.New(), "-", "_", -1)
-	if _, err := r.Db("angles").TableCreate(tempTable, r.TableCreateOpts{Durability: "soft"}).Run(session); err != nil {
-		log.Fatalln(err)
-	}
-	if _, err := r.Table(tempTable).IndexCreate("uri").Run(session); err != nil {
-		log.Fatalln(err)
-	}
-
 	return &db{
-		tempTable: tempTable,
-		session:   session,
+		session: session,
 	}
+}
+
+// setup allocates temporary database resources. Call cleanup to dispose them.
+func (db *db) setup() {
+	// create temporary table to hold results
+	log.Println("Creating temporary database table.")
+	tempTable := strings.Replace(uuid.New(), "-", "_", -1)
+	if _, err := r.Db("angles").TableCreate(tempTable, r.TableCreateOpts{Durability: "soft"}).Run(db.session); err != nil {
+		log.Fatalln(err)
+	}
+	if _, err := r.Table(tempTable).IndexCreate("uri").Run(db.session); err != nil {
+		log.Fatalln(err)
+	}
+	db.tempTable = tempTable
 }
 
 func (db *db) getUncrawledUris() chan string {
@@ -168,9 +202,8 @@ func (db *db) storeRealURI(uri, realURI string) {
 	}
 }
 
-// close merges the crawl results back into the tweetedUris table
-// and does some clean up work
-func (db *db) close() {
+// merge moves the results from the temporary back into the main table
+func (db *db) merge() {
 	// merge results back into the original table
 	log.Println("Merging temporary results.")
 	updatedURIs := r.
@@ -181,10 +214,16 @@ func (db *db) close() {
 		Table("tweetedUris").
 		Insert(updatedURIs, r.InsertOpts{Conflict: "replace"}).
 		RunWrite(db.session)
+}
 
+// cleanup removes temporary database resources
+func (db *db) cleanup() {
 	log.Println("Cleaning up.")
 	// remove temporary table
 	r.Db("angles").TableDrop(db.tempTable).Run(db.session)
+}
 
+// close shuts down the database connection
+func (db *db) close() {
 	db.session.Close()
 }

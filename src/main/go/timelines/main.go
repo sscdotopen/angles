@@ -64,7 +64,7 @@ func main() {
 			}
 
 			for _, uri := range tweet.Entities.Urls {
-				storeURI(session, exp.id, uri.Expanded_url)
+				storeURI(session, exp.id, tweet.Id, uri.Expanded_url)
 			}
 		}
 	}
@@ -184,11 +184,12 @@ func (e *explorer) getTimeline(api *twitter.TwitterApi, session *r.Session) chan
 }
 
 // storeURI persists a URI tweeted by an explorer in the database
-func storeURI(session *r.Session, explorerID int64, uri string) {
+func storeURI(session *r.Session, explorerID, tweetID int64, uri string) {
 	r.
 		Table("tweetedUris").
 		Insert(map[string]interface{}{
 		"explorer": explorerID,
+		"tweet":    tweetID,
 		"uri":      uri,
 	}).
 		RunWrite(session)
