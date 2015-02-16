@@ -77,8 +77,10 @@ func main() {
 			case s := <-sig:
 				// SIGTERM or SIGINT received
 				log.Println("Received", s)
-				// log.Println("WARNING: Temporary table", db.tempTable, "still exists. Merge has to be done manually.")
-				// log.Printf("Run r.db('angles').table('tweetedUris').insert(r.db('angles').table('%s').eqJoin('uri', r.db('angles').table('tweetedUris'), {index: 'uri'}).zip(), {conflict:'replace'}) on the RethinkDB console.\n", db.tempTable)
+				// tell workers to stop
+				for j := 0; j < numWorkers; j++ {
+					quit <- struct{}{}
+				}
 				db.merge()
 				db.cleanup()
 				return
