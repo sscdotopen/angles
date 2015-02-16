@@ -30,6 +30,11 @@
             <name>Gephi Releases</name>
             <url>http://nexus.gephi.org/nexus/content/repositories/releases/</url>
         </repository>
+        <repository>
+            <id>com.rethinkscala</id>
+            <name>RethinkScala Repository</name>
+            <url>http://kclay.github.io/releases/</url>
+        </repository>
     </repositories>
 
     <!-- DEPENDENCIES -->
@@ -184,6 +189,12 @@
             <groupId>org.gephi</groupId>
             <artifactId>gephi-toolkit</artifactId>
             <version>0.8.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.rethinkscala</groupId>
+            <artifactId>core_2.11</artifactId>
+            <version>0.4.6</version>
         </dependency>
 
     </dependencies>
