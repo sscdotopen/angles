@@ -31,9 +31,12 @@
             <url>http://nexus.gephi.org/nexus/content/repositories/releases/</url>
         </repository>
         <repository>
-            <id>com.rethinkscala</id>
-            <name>RethinkScala Repository</name>
-            <url>http://kclay.github.io/releases/</url>
+            <id>rethinkjava-mvn-repo</id>
+            <url>https://raw.github.com/dkhenry/rethinkjava/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -192,14 +195,16 @@
         </dependency>
 
         <dependency>
-            <groupId>com.rethinkscala</groupId>
-            <artifactId>core_2.11</artifactId>
-            <version>0.4.6</version>
+            <groupId>com.dkhenry</groupId>
+            <artifactId>rethinkjava</artifactId>
+            <version>0.9</version>
         </dependency>
 
     </dependencies>
 
     <!-- END DEPENDENCIES -->
+    
+    
 
     <!-- BUILD SETTINGS -->
     <build>
