@@ -34,36 +34,39 @@ func main() {
 		log.Println("Fetching tweets")
 
 		uris := db.getUncrawledUris()
-		quit := make(chan struct{})
+		quit := make(chan struct{}, numWorkers)
 		done := make(chan struct{})
 
 		for i := 0; i < numWorkers; i++ {
 			go func() {
 				for {
+					uri, ok := <-uris
+					if !ok {
+						done <- struct{}{}
+						return
+					}
+
+					log.Println("Fetching", uri)
+					resp, err := http.Head(uri)
+
+					var realURI string
+					if err != nil {
+						log.Println(err)
+						realURI = "INVALID"
+					} else {
+						func() {
+							defer resp.Body.Close()
+							realURI = resp.Request.URL.String()
+							log.Println("Fetched", realURI)
+						}()
+					}
+					db.storeRealURI(uri, realURI)
+
 					select {
 					case <-quit:
 						return
-					case uri, ok := <-uris:
-						if !ok {
-							done <- struct{}{}
-							return
-						}
-
-						log.Println("Fetching", uri)
-						resp, err := http.Head(uri)
-
-						var realURI string
-						if err != nil {
-							log.Println(err)
-							realURI = "INVALID"
-						} else {
-							func() {
-								defer resp.Body.Close()
-								realURI = resp.Request.URL.String()
-								log.Println("Fetched", realURI)
-							}()
-						}
-						db.storeRealURI(uri, realURI)
+					default:
+						continue
 					}
 				}
 			}()
@@ -77,7 +80,7 @@ func main() {
 			case s := <-sig:
 				// SIGTERM or SIGINT received
 				log.Println("Received", s)
-				// tell workers to stop
+				log.Println("Stopping workers.")
 				for j := 0; j < numWorkers; j++ {
 					quit <- struct{}{}
 				}
