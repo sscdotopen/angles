@@ -11,12 +11,12 @@ object GraphGeneratorTest extends App{
   
   val uriToString = (uri: URI) => uri.toString
 
-  var testList : mutable.MutableList[ClusterableTweet] = new mutable.MutableList
+  var testList : mutable.MutableList[ExplorerUriPair] = new mutable.MutableList
   
-  testList += new ClusterableTweet("Hugo", List(URI.create("http://google.com/")))
-  testList += new ClusterableTweet("Hugo", List(URI.create("http://google.com/"), URI.create("https://google.com/")))
-  testList += new ClusterableTweet("Peter", List(URI.create("http://golem.de/"), URI.create("http://google.com/")))
-  testList += new ClusterableTweet("Gerda", List(URI.create("http://google.com/")))
+  testList += new ExplorerUriPair("Hugo", List(URI.create("http://google.com/")))
+  testList += new ExplorerUriPair("Hugo", List(URI.create("http://google.com/"), URI.create("https://google.com/")))
+  testList += new ExplorerUriPair("Peter", List(URI.create("http://golem.de/"), URI.create("http://google.com/")))
+  testList += new ExplorerUriPair("Gerda", List(URI.create("http://google.com/")))
 
   val gen = new GraphGenerator
 

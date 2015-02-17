@@ -34,7 +34,7 @@ class GraphGenerator {
    * @param urlMappingFunction Function for mapping a URI to a String
    * @param similarityFunction Function for calculating the similarity between two vectors.
    */
-  def execute(inputSet: List[ClusterableTweet],
+  def execute(inputSet: List[ExplorerUriPair],
               urlMappingFunction: (URI) => String,
               similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
 
@@ -65,7 +65,7 @@ class GraphGenerator {
       for ((rightId, rhs) <- explorerSpace) {
         if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
           val similarity: Double = similarityFunction(lhs, rhs)
-          if (similarity > 0.5)
+          if (similarity >= 0.5 && similarity <= 0.95)
             resultSet += (((leftId, rightId), similarity))
         }
       }
@@ -92,7 +92,7 @@ class GraphGenerator {
   /**
    * Calculate a map of all tweeted uris per explorer.
    */
-  private def calculateExplorerUrlMap(tweets: List[ClusterableTweet], uriToString: (URI) => String): Map[String, mutable.MutableList[String]] = {
+  private def calculateExplorerUrlMap(tweets: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, mutable.MutableList[String]] = {
     var resultMap = new mutable.HashMap[String, mutable.MutableList[String]]
 
     for (tweet <- tweets) {
@@ -106,7 +106,7 @@ class GraphGenerator {
   /**
    * Calculate a uri-dimension map.
    */
-  private def calculateDimensions(inputSet: List[ClusterableTweet], mappingFunction: (URI) => String): Map[String, Int] = {
+  private def calculateDimensions(inputSet: List[ExplorerUriPair], mappingFunction: (URI) => String): Map[String, Int] = {
     inputSet.flatMap(
       t => t.mapURIs(mappingFunction)
     ).distinct.zipWithIndex.toMap
