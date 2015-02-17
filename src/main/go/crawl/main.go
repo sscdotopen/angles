@@ -29,20 +29,38 @@ func main() {
 	db := initDb()
 	defer db.close()
 
+	// signal for workers to exit
+	quit := make(chan struct{}, numWorkers)
+	// signal for program to halt
+	exit := make(chan struct{})
+
+	go func() {
+		s := <-sig
+		// SIGTERM or SIGINT received
+		exit <- struct{}{}
+		log.Println("Received", s)
+		log.Println("Stopping workers.")
+		for j := 0; j < numWorkers; j++ {
+			quit <- struct{}{}
+		}
+	}()
+
 	for {
 		db.setup()
 		log.Println("Fetching tweets")
 
 		uris := db.getUncrawledUris()
-		quit := make(chan struct{}, numWorkers)
+		// signal from workers, that they are done
 		done := make(chan struct{})
 
 		for i := 0; i < numWorkers; i++ {
 			go func() {
+				// always signal that the worker exited
+				defer func() { done <- struct{}{} }()
+
 				for {
 					uri, ok := <-uris
 					if !ok {
-						done <- struct{}{}
 						return
 					}
 
@@ -72,28 +90,37 @@ func main() {
 			}()
 		}
 
-		for i := 0; i < numWorkers; i++ {
-			select {
-			case <-done:
-				// worker exited cleanly
-				continue
-			case s := <-sig:
-				// SIGTERM or SIGINT received
-				log.Println("Received", s)
-				log.Println("Stopping workers.")
-				for j := 0; j < numWorkers; j++ {
-					quit <- struct{}{}
-				}
-				db.merge()
-				db.cleanup()
-				return
+		// wait for the first worker to be done
+		<-done
+		log.Println("First worker exited. Waiting for others.")
+		// one worker done, waiting for the others to follow
+		allDone := make(chan struct{})
+		go func() {
+			for i := 0; i < numWorkers-1; i++ {
+				<-done
 			}
+			allDone <- struct{}{}
+		}()
+
+		// wait for all workers to exit, timeout after 20 seconds
+		select {
+		case <-allDone:
+			log.Println("All workers are done. Cleaning up.")
+		case <-time.Tick(20 * time.Second):
+			log.Println("Timed out. Not all workers exited in time. Cleaning up anyways.")
 		}
 
+		// do clean up work
 		db.merge()
 		db.cleanup()
-		log.Println("Done. Save to exit now. Sleeping a minute before next run.")
-		time.Sleep(time.Minute)
+
+		log.Println("You may see errors, from workers, which are late to the show, now. Sad for them, ok for us. :)")
+
+		select {
+		case <-exit:
+			return
+		case <-time.Tick(15 * time.Minute):
+		}
 	}
 }
 
@@ -188,6 +215,10 @@ func (db *db) getUncrawledUris() chan string {
 }
 
 func (db *db) storeRealURI(uri, realURI string) {
+	if db.tempTable == "" {
+		return
+	}
+
 	result, err := r.
 		Table(db.tempTable).
 		// don't wait for disk to confirm write, instead return as soon as possible
@@ -195,7 +226,7 @@ func (db *db) storeRealURI(uri, realURI string) {
 		RunWrite(db.session)
 
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	if result.Created == 0 && result.Inserted == 0 {
@@ -209,6 +240,7 @@ func (db *db) storeRealURI(uri, realURI string) {
 
 // merge moves the results from the temporary back into the main table
 func (db *db) merge() {
+
 	// merge results back into the original table
 	log.Println("Merging temporary results.")
 	updatedURIs := r.
@@ -219,6 +251,7 @@ func (db *db) merge() {
 		Table("tweetedUris").
 		Insert(updatedURIs, r.InsertOpts{Conflict: "replace"}).
 		RunWrite(db.session)
+	db.tempTable = ""
 }
 
 // cleanup removes temporary database resources
@@ -226,6 +259,7 @@ func (db *db) cleanup() {
 	log.Println("Cleaning up.")
 	// remove temporary table
 	r.Db("angles").TableDrop(db.tempTable).Run(db.session)
+	log.Println("Done.")
 }
 
 // close shuts down the database connection
