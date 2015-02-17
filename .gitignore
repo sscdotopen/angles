@@ -2,3 +2,5 @@ target/*
 *.iml
 .idea/*
 src/main/resources/angles-conf.properties
+.mysql-passes
+.vagrant

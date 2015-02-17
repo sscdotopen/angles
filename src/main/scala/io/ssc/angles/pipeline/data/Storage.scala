@@ -20,18 +20,32 @@ package io.ssc.angles.pipeline.data
 
 import io.ssc.angles.Config
 import io.ssc.data._
+import org.slf4j.LoggerFactory
 import scalikejdbc._
-import twitter4j.{TwitterObjectFactory, Status}
+import twitter4j.{User, TwitterObjectFactory, Status}
 import org.joda.time.DateTime
 import scala.collection.mutable
 ;
 
 object Storage {
-
+  val log = LoggerFactory.getLogger(Storage.getClass)
   Class.forName("com.mysql.jdbc.Driver")
-  ConnectionPool.singleton(Config.property("jdbc.url"), Config.property("jdbc.user"), Config.property("jdbc.password"))
+
+  val settings = ConnectionPoolSettings(
+    validationQuery = "SELECT 1"
+  )
+  ConnectionPool.singleton(
+    Config.property("jdbc.url"),
+    Config.property("jdbc.user"),
+    Config.property("jdbc.password"),
+    settings
+  )
 
   implicit val session = AutoSession
+
+  def getConn() = {
+    ConnectionPool.borrow()
+  }
 
   def allExplorers(): List[Explorer] = {
     (sql"SELECT * FROM explorers" map { Explorer(_) }).list().apply()
@@ -48,7 +62,7 @@ object Storage {
   }
 
   def expandedUrlsInTweetsSince(since: DateTime) = {
-    (sql"SELECT * FROM tweets WHERE creation_time >= ${since}" map { rs =>
+    (sql"SELECT * FROM tweets WHERE creation_time >= ${since} and follow_retweets=4" map { rs =>
       val status = Tweet(rs).status()
 
       if (status.getURLEntities.length > 0) {
@@ -69,15 +83,22 @@ object Storage {
     (sql"SELECT * FROM tweets" map { Tweet(_) }).list().apply()
   }
 
-  def saveTweet(status: Status, explorerId: Long, fetchTime: DateTime): Boolean = {
+  def saveTweet(status: Status, explorerId: Long, fetchTime: DateTime, parentId: Option[Long]): Boolean = {
 
     val creationTime = new DateTime(status.getCreatedAt)
 
     var success = true
     try {
       withSQL {
-        insert.into(Tweet).values(status.getId, explorerId, creationTime, fetchTime,
-                                  TwitterObjectFactory.getRawJSON(status))
+        insert.into(Tweet).namedValues(
+          Tweet.column.id -> status.getId,
+          Tweet.column.explorerId -> explorerId,
+          Tweet.column.creationTime -> creationTime,
+          Tweet.column.fetchTime -> fetchTime,
+          Tweet.column.json -> TwitterObjectFactory.getRawJSON(status),
+          Tweet.column.parentTweet -> parentId,
+          Tweet.column.retweetCount -> status.getRetweetCount
+        )
       }.update.apply()
     } catch {
       case e: Throwable =>
@@ -89,8 +110,40 @@ object Storage {
 
   def crawledWebsites(since: DateTime) = {
     //TODO better check fetchtime of tweets
-    (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since}" map { CrawledWebsite(_) }).list().apply()
-  }
+//    (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since}" map { CrawledWebsite(_) }).list().apply()
+
+    var count = 0
+    Iterator.continually {
+      val result = (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since} LIMIT 2000 OFFSET ${count}" map {
+        CrawledWebsite(_)
+      }).list().apply()
+      val length = result.length
+      count += length
+      log.info("Fetched {} crawled websites", count)
+      if (length > 0)
+        Some(result)
+      else
+        None
+    }
+  }.takeWhile(_ != None).flatten.flatten
+
+  def unmarkedWebsites(since: DateTime) = {
+    //    (sql"SELECT * FROM crawled_websites WHERE fetch_time >= ${since}" map { CrawledWebsite(_) }).list().apply()
+
+    var count = 0
+    Iterator.continually {
+      val result = (sql"SELECT w.* FROM crawled_websites w  JOIN tweets t on w.tweet_id = t.id WHERE w.fetch_time >= ${since} AND t.follow_retweets = 0 AND t.retweet_count > 0 LIMIT 2000 OFFSET ${count}" map {
+        CrawledWebsite(_)
+      }).list().apply()
+      val length = result.length
+      count += length
+      log.info("Fetched {} unmarked websites", count)
+      if (length > 0)
+        Some(result)
+      else
+        None
+    }
+  }.takeWhile(_ != None).flatten.flatten
 
   def alreadyCrawled(tweetId: Long, uri: String) = {
     (sql"SELECT count(*) AS cnt from crawled_websites WHERE tweet_id = ${tweetId} AND uri = ${uri}" map { _.int("cnt") > 0 }).single().apply().get
@@ -204,6 +257,59 @@ object Storage {
     }).single().apply()
   }
 
+  def notCrawledExplorers() = {
+    (sql"SELECT DISTINCT t.explorer_id FROM tweets t LEFT JOIN explorers e ON t.explorer_id = e.id WHERE e.id IS NULL" map {rs => rs.long("explorer_id")}).list().apply()
+  }
+
+  def saveExplorer(user: User) = {
+    withSQL {
+      insert.into(Explorer).values(user.getId, user.getScreenName, user.getName, user.getDescription)
+    }.update.apply()
+  }
+  
+  def allTweetURIPairs() = {
+    sql"SELECT t.explorer_id, w.real_uri FROM tweets t JOIN crawled_websites w ON t.id = w.tweet_id;" map {
+      rs => (rs.string(1), rs.string(2))
+    } list() apply()
+  }
+
+  def notFollowedTweets() = {
+    (sql"SELECT id FROM tweets WHERE retweet_count>0 AND follow_retweets=1" map {rs => rs.long("id")}).list().apply()
+  }
+
+  def markTweetFollowed(tweet: Long): Unit = {
+    withSQL {
+      update(Tweet).set(
+        Tweet.column.followRetweets -> 2
+      ).where.eq(Tweet.column.id, tweet)
+    }.update.apply()
+  }
+
+  def markTweetToFollow(tweet: Long)(implicit db: DB): Unit = {
+    DB.withinTx { implicit session =>
+      withSQL {
+        update(Tweet).set(
+          Tweet.column.followRetweets -> 1
+        ).where.eq(Tweet.column.id, tweet)
+      }.update.apply()
+    }
+  }
+
+  def markUninterestingTweets() = {
+    withSQL {
+      update(Tweet).set(
+        Tweet.column.followRetweets -> 3
+      ).where.eq(Tweet.column.followRetweets, 0)
+    }
+  }
+
+  def markTweetCrawled(tweet: Long) = {
+    withSQL {
+      update(Tweet).set(
+        Tweet.column.followRetweets -> 0
+      ).where.eq(Tweet.column.id, tweet)
+    }
+  }
 }
 
 

@@ -21,11 +21,13 @@ import io.ssc.angles.Config
 import io.ssc.angles.pipeline._
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import twitter4j.TwitterException
 
-import scala.collection.mutable.Queue
+object ExtractData extends App {
+  val log = LoggerFactory.getLogger(UpdateStoryIndex.getClass)
 
-object UpdateStoryIndex extends App {
-  val since = new DateTime().minusDays(Config.property("angles.updateStoryIndex.sinceDays").toInt)
-  new IndexArticles().execute(since)
+  val since = new DateTime().minusDays(Config.property("angles.extractData.sinceDays").toInt)
+  new CrawlUris().execute(since)
+  new ExtractMetadata().execute(since)
+  new ExtractNamedEntities().execute(since)
+  new MarkGermanTweets().execute(since)
 }

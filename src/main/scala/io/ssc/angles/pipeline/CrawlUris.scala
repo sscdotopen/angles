@@ -40,12 +40,12 @@ class CrawlUris extends Step {
     val totalElements = latestUrls.size
 
     log.info("Crawling urls from latest tweets")
-    val crawler = new Crawler
 
     latestUrls.par foreach { case (statusId, uri) =>
       val currentElement = crawledElements.getAndIncrement
       if (!Storage.alreadyCrawled(statusId, uri)) {
 
+        val crawler = new Crawler
         val result = try {
           log.info("[{}/{}] Fetching {}", currentElement.toString, String.valueOf(totalElements), uri)
           crawler.fetch(uri)
@@ -63,6 +63,7 @@ class CrawlUris extends Step {
             log.warn("[" + currentElement + "/" + totalElements + "] Nothing found")
         }
       }
+        Storage.markTweetCrawled(statusId)
     }
   }
 
