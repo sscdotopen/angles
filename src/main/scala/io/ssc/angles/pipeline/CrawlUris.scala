@@ -18,41 +18,49 @@
 
 package io.ssc.angles.pipeline
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import io.ssc.angles.pipeline.data.Storage
 import io.ssc.angles.pipeline.http.Crawler
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
+
 class CrawlUris extends Step {
 
   val log = LoggerFactory.getLogger(classOf[CrawlUris])
 
+  var crawledElements : AtomicInteger = new AtomicInteger()
+
   override def execute(since: DateTime): Unit = {
+    crawledElements = new AtomicInteger(0)
 
     log.info("Extracting urls from latest tweets")
     val latestUrls = Storage.expandedUrlsInTweetsSince(since)
+    val totalElements = latestUrls.size
 
     log.info("Crawling urls from latest tweets")
 
     latestUrls.par foreach { case (statusId, uri) =>
+      val currentElement = crawledElements.getAndIncrement
       if (!Storage.alreadyCrawled(statusId, uri)) {
 
         val crawler = new Crawler
         val result = try {
-          log.info("Fetching {}", uri)
+          log.info("[{}/{}] Fetching {}", currentElement.toString, String.valueOf(totalElements), uri)
           crawler.fetch(uri)
         } catch {
           case t: Throwable =>
-            log.error("Fetching failed", t)
+            log.error("[{}/{}] Fetching failed", currentElement.toString, String.valueOf(totalElements), t)
             None
         }
 
         result match {
           case Some((realUri, charset, html)) =>
             Storage.saveCrawledWebsite(uri, realUri, statusId, new DateTime(), charset.displayName, html)
-            log.info("Fetched {}", realUri)
+            log.info("[{}/{}] Fetched {}", currentElement.toString, String.valueOf(totalElements), realUri)
           case _ =>
-            log.warn("Nothing found")
+            log.warn("[" + currentElement + "/" + totalElements + "] Nothing found")
         }
       }
         Storage.markTweetCrawled(statusId)
