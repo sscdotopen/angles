@@ -215,10 +215,6 @@ func (db *db) getUncrawledUris() chan string {
 }
 
 func (db *db) storeRealURI(uri, realURI string) {
-	if db.tempTable == "" {
-		return
-	}
-
 	result, err := r.
 		Table(db.tempTable).
 		// don't wait for disk to confirm write, instead return as soon as possible
@@ -240,7 +236,6 @@ func (db *db) storeRealURI(uri, realURI string) {
 
 // merge moves the results from the temporary back into the main table
 func (db *db) merge() {
-
 	// merge results back into the original table
 	log.Println("Merging temporary results.")
 	updatedURIs := r.
@@ -251,7 +246,6 @@ func (db *db) merge() {
 		Table("tweetedUris").
 		Insert(updatedURIs, r.InsertOpts{Conflict: "replace"}).
 		RunWrite(db.session)
-	db.tempTable = ""
 }
 
 // cleanup removes temporary database resources
