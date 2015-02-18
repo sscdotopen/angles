@@ -61,14 +61,15 @@ class GraphGenerator {
    */
   private def calculateSimilarity(explorerSpace: Map[String, RealVector], similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
     var resultSet: mutable.HashMap[(String, String), Double] = mutable.HashMap.empty
-    for ((leftId, lhs) <- explorerSpace) {
-      for ((rightId, rhs) <- explorerSpace) {
-        if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
-          val similarity: Double = similarityFunction(lhs, rhs)
-          if (similarity >= 0.5 && similarity <= 0.95)
-            resultSet += (((leftId, rightId), similarity))
+    explorerSpace.foreach { case (leftId, lhs) => {
+          for ((rightId, rhs) <- explorerSpace) {
+            if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
+              val similarity: Double = similarityFunction(lhs, rhs)
+              if (similarity >= 0.5 && similarity <= 0.95)
+                resultSet += (((leftId, rightId), similarity))
+            }
+          }
         }
-      }
     }
     resultSet.toMap
   }

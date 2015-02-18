@@ -8,9 +8,7 @@ import org.apache.commons.lang3.StringUtils
 /**
  * Created by xolor on 16.02.15.
  */
-object RethinkDb extends App {                     7
-  
-  getPairList
+object RethinkDb extends App {                     
 
   def getPairList : List[ExplorerUriPair] = {
     val r = RqlConnection.connect("localhost", 28015)
@@ -21,14 +19,13 @@ object RethinkDb extends App {                     7
     var pairList: collection.mutable.MutableList[ExplorerUriPair] = collection.mutable.MutableList.empty[ExplorerUriPair]
     val it = dbList.iterator()
 
-    //val it = dbList.asInstanceOf[java.util.List[java.util.Map[String, AnyRef]]].iterator()
-
     while (it.hasNext) {
       try {
         val map: java.util.Map[String, AnyRef] = it.next().get().asInstanceOf[java.util.Map[String, AnyRef]]
         var uri = map.getOrDefault("realUri", map.get("uri")).asInstanceOf[String]
         val explorer = new java.math.BigDecimal(map.get("explorer").asInstanceOf[Double]).toPlainString
         uri = StringUtils.replace(uri, " ", "%20")
+        uri = StringUtils.replace(uri, "|", "%7C")
         pairList += new ExplorerUriPair(explorer, uri)
       } catch {
         case e: IllegalArgumentException => println(e.getMessage)
