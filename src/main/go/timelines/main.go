@@ -109,13 +109,13 @@ type explorer struct {
 }
 
 // update perists the latest timeline state (i.e. fetchTime and maxID)
-func (e *explorer) update(session *r.Session, maxID int64) {
+func (e *explorer) update(session *r.Session, maxID *int64) {
 	r.
 		Table("explorers").
 		Update(map[string]interface{}{
 		"id":        e.id,
 		"fetchTime": r.Now(),
-		"maxID":     maxID,
+		"maxID":     *maxID,
 	}).
 		RunWrite(session)
 }
@@ -129,7 +129,7 @@ func (e *explorer) getTimeline(api *twitter.TwitterApi, session *r.Session) chan
 	go func() {
 		// the minimum id, that has been returned
 		var minID int64
-		defer e.update(session, minID)
+		defer e.update(session, &minID)
 
 		for {
 			queryParams := url.Values{}
