@@ -1,3 +1,3 @@
 [submodule "src/main/go"]
 	path = src/main/go
-	url = git@github.com:nwolber/go-angles.git
+	url = https://github.com/nwolber/go-angles.git
