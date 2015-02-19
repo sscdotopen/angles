@@ -8,7 +8,6 @@ import java.util.Locale
 import com.google.common.collect.{BiMap, HashBiMap, HashMultimap, SetMultimap}
 import edu.ucla.sspace.graph.{ChineseWhispersClustering, Graphs, SimpleWeightedEdge, SparseUndirectedGraph}
 import edu.ucla.sspace.util.MultiMap
-import io.ssc.angles.pipeline.data.RethinkDb
 import org.apache.commons.math.linear.RealVector
 import org.slf4j.LoggerFactory
 
@@ -19,6 +18,8 @@ import scala.collection.JavaConversions._
  */
 object BuildExplorerGraph extends App {
   
+  val csvFile = "pairs.csv"
+  
   val clusterReadWriter = new ClusterReadWriter
 
   val uriToHost = (uri: URI) => uri.getHost
@@ -27,9 +28,11 @@ object BuildExplorerGraph extends App {
 
   logger.info("Querying database...")
 
-  val workingList: List[ExplorerUriPair] = RethinkDb.getPairList
-  logger.info("Got {} pairs from RethinkDB", workingList.size)
-
+  //val workingList: List[ExplorerUriPair] = RethinkDb.getPairList
+  //logger.info("Got {} pairs from RethinkDB", workingList.size)
+  val workingList: List[ExplorerUriPair] = CSVReader.readExplorerPairsFromCSV(csvFile)
+  logger.info("Got {} pairs from CSV", workingList.size)
+  
   // Build graph with cosine similarity function
   logger.info("Preparing graph with cosine similarity")
   val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
