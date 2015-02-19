@@ -31,11 +31,11 @@ object BuildExplorerGraph extends App {
   logger.info("Got {} pairs from RethinkDB", workingList.size)
 
   // Build graph with cosine similarity function
-  /*logger.info("Preparing graph with cosine similarity")
+  logger.info("Preparing graph with cosine similarity")
   val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
   writeGraphCSV("graph_cosine.csv", cosineGraph)
   val cosineClusterMap = calculateClusters(cosineGraph)
-  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)*/
+  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)
 
   // Build graph with jaccard similarity function
   logger.info("Preparing graph with extended jaccard similarity")

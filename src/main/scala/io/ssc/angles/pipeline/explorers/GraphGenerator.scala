@@ -2,7 +2,6 @@ package io.ssc.angles.pipeline.explorers
 
 import java.net.URI
 
-import org.apache.commons.lang3.ObjectUtils
 import org.apache.commons.math.linear.{OpenMapRealVector, RealVector}
 import org.slf4j.LoggerFactory
 
@@ -12,7 +11,7 @@ import scala.collection.mutable
  * Created by xolor on 11.02.15.
  */
 class GraphGenerator {
-  
+
   val logger = LoggerFactory.getLogger(classOf[GraphGenerator])
 
   // Sample implementation of cosine similarity
@@ -41,7 +40,7 @@ class GraphGenerator {
     // Prepare map for URI->Dimension
     val dimensionMap: Map[String, Int] = calculateDimensions(inputSet, urlMappingFunction)
     logger.info("Found {} dimensions for url mapping", dimensionMap.size)
-    
+
     // Collect all urls for each explorer
     val explorerUrlMap: Map[String, mutable.MutableList[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
 
@@ -59,17 +58,26 @@ class GraphGenerator {
   /**
    * Calculate similarities with the previously given similarity-function
    */
-  private def calculateSimilarity(explorerSpace: Map[String, RealVector], similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
+  private def calculateSimilarity(explorerMap: Map[String, RealVector], similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
     var resultSet: mutable.HashMap[(String, String), Double] = mutable.HashMap.empty
-    explorerSpace.foreach { case (leftId, lhs) => {
-          for ((rightId, rhs) <- explorerSpace) {
-            if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
-              val similarity: Double = similarityFunction(lhs, rhs)
-              if (similarity >= 0.5 && similarity <= 0.95)
-                resultSet += (((leftId, rightId), similarity))
-            }
-          }
-        }
+
+    val explorerSpace = explorerMap.toSeq
+    var outerCount = 0
+
+    while (outerCount < explorerSpace.size) {
+      val (leftId, lhs) = explorerSpace(outerCount)
+      var innerCount = 0
+
+      while (innerCount < outerCount - 1) {
+        val (rightId, rhs) = explorerSpace(innerCount)
+        //if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
+          val similarity: Double = similarityFunction(lhs, rhs)
+          if (similarity >= 0.5 && similarity <= 0.95)
+            resultSet += (((leftId, rightId), similarity))
+        //}
+        innerCount += 1
+      }
+      outerCount += 1
     }
     resultSet.toMap
   }
