@@ -1,18 +1,23 @@
 package io.ssc.angles.pipeline.explorers
 
 import java.net.URI
+import java.util
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
-import org.apache.commons.lang3.ObjectUtils
 import org.apache.commons.math.linear.{OpenMapRealVector, RealVector}
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable
+import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 /**
  * Created by xolor on 11.02.15.
  */
 class GraphGenerator {
-  
+
   val logger = LoggerFactory.getLogger(classOf[GraphGenerator])
 
   // Sample implementation of cosine similarity
@@ -41,9 +46,9 @@ class GraphGenerator {
     // Prepare map for URI->Dimension
     val dimensionMap: Map[String, Int] = calculateDimensions(inputSet, urlMappingFunction)
     logger.info("Found {} dimensions for url mapping", dimensionMap.size)
-    
+
     // Collect all urls for each explorer
-    val explorerUrlMap: Map[String, mutable.MutableList[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
+    val explorerUrlMap: Map[String, java.util.List[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
 
     // Convert to real mathematical vectors with x dimensions
     val explorerSpace: Map[String, RealVector] = buildExplorerSpace(dimensionMap, explorerUrlMap)
@@ -59,32 +64,69 @@ class GraphGenerator {
   /**
    * Calculate similarities with the previously given similarity-function
    */
-  private def calculateSimilarity(explorerSpace: Map[String, RealVector], similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
-    var resultSet: mutable.HashMap[(String, String), Double] = mutable.HashMap.empty
-    explorerSpace.foreach { case (leftId, lhs) => {
-          for ((rightId, rhs) <- explorerSpace) {
-            if (ObjectUtils.notEqual(leftId, rightId) && !resultSet.contains((rightId, leftId)) && !resultSet.contains((leftId, leftId))) {
-              val similarity: Double = similarityFunction(lhs, rhs)
-              if (similarity >= 0.5 && similarity <= 0.95)
-                resultSet += (((leftId, rightId), similarity))
-            }
-          }
+  private def calculateSimilarity(explorerMap: Map[String, RealVector], similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
+    var resultSet: ConcurrentHashMap[(String, String), Double] = new ConcurrentHashMap[(String, String), Double]
+
+    val explorerSpace = explorerMap.toSeq
+    val totalElements = explorerSpace.size
+    val threadCount = Runtime.getRuntime.availableProcessors()
+    val partitionSize = totalElements / threadCount
+
+    val tasks = 0 until threadCount
+    val futures = tasks.map {
+      threadNumber => Future {
+        val partitionBegin = threadNumber * partitionSize
+        var partitionEnd: Int = 0
+        if (threadNumber == threadCount - 1) {
+          partitionEnd = totalElements
+        } else {
+          partitionEnd = partitionBegin + partitionSize
         }
+        logger.info("Starting thread {} with partition from {} to {}", threadNumber.toString, partitionBegin.toString, partitionEnd.toString)
+        calculateSimilarityPartially(similarityFunction, resultSet, explorerSpace, partitionBegin, partitionEnd)
+        logger.info("Finished thread {}", threadNumber.toString, partitionBegin.toString, partitionEnd.toString)
+      }
     }
+    val futureSequence = Future.sequence(futures)
+    Await.result(futureSequence, Duration.Inf)
     resultSet.toMap
+  }
+
+  def calculateSimilarityPartially(similarityFunction: (RealVector, RealVector) => Double,
+                                   resultSet: ConcurrentHashMap[(String, String), Double],
+                                   explorerSpace: Seq[(String, RealVector)],
+                                   workerBegin: Int, workerEnd: Int)
+  : Unit = {
+    var outerCount = workerBegin
+    while (outerCount < workerEnd) {
+      val (leftId, lhs) = explorerSpace(outerCount)
+      var innerCount = 0
+
+      while (innerCount < outerCount) {
+        val (rightId, rhs) = explorerSpace(innerCount)
+        val similarity: Double = similarityFunction(lhs, rhs)
+        if (similarity >= 0.5 && similarity <= 0.95)
+          resultSet += (((leftId, rightId), similarity))
+        innerCount += 1
+      }
+      outerCount += 1
+    }
   }
 
   /**
    * Convert the previously generated explorer-uri map into a real vector space. 
    */
-  private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, mutable.MutableList[String]]): Map[String, RealVector] = {
-    var explorerSpace: mutable.Map[String, RealVector] = mutable.HashMap.empty
+  private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, java.util.List[String]]): Map[String, RealVector] = {
+    var explorerSpace: ConcurrentHashMap[String, RealVector] = new ConcurrentHashMap[String, RealVector]
 
-    for ((name, urls) <- explorerUrlMap) {
-      // Convert the list representation to a mathematic vector
-      val vector: RealVector = new OpenMapRealVector(dimensionMap.size)
-      urls.foreach(url => vector.setEntry(dimensionMap.get(url).get, vector.getEntry(dimensionMap.get(url).get) + 1))
-      explorerSpace += ((name, vector))
+    explorerUrlMap.par.foreach { case tuple => {
+          val name = tuple._1
+          val urls = tuple._2
+          // Convert the list representation to a mathematical vector
+          val vector: RealVector = new OpenMapRealVector(dimensionMap.size)
+          urls.foreach(url => vector.setEntry(dimensionMap.get(url).get, vector.getEntry(dimensionMap.get(url).get) + 1))
+          explorerSpace += ((name, vector))
+        }
     }
 
     explorerSpace.toMap
@@ -93,12 +135,14 @@ class GraphGenerator {
   /**
    * Calculate a map of all tweeted uris per explorer.
    */
-  private def calculateExplorerUrlMap(tweets: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, mutable.MutableList[String]] = {
-    var resultMap = new mutable.HashMap[String, mutable.MutableList[String]]
+  private def calculateExplorerUrlMap(tweets: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, util.List[String]] = {
+    var resultMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
 
-    for (tweet <- tweets) {
-      val newValue = resultMap.getOrElse(tweet.explorerId, mutable.MutableList.empty) ++ tweet.mapURIs(uriToString)
+    tweets.par.foreach { case tweet => {
+      var newValue: util.List[String] = resultMap.getOrElse(tweet.explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
+      newValue += tweet.mapURI(uriToString)
       resultMap.update(tweet.explorerId, newValue)
+    }
     }
 
     resultMap.toMap
@@ -108,9 +152,9 @@ class GraphGenerator {
    * Calculate a uri-dimension map.
    */
   private def calculateDimensions(inputSet: List[ExplorerUriPair], mappingFunction: (URI) => String): Map[String, Int] = {
-    inputSet.flatMap(
-      t => t.mapURIs(mappingFunction)
-    ).distinct.zipWithIndex.toMap
+    inputSet.par.map(
+      t => mappingFunction(t.uri)
+    ).distinct.zipWithIndex.seq.toMap
   }
 
 }

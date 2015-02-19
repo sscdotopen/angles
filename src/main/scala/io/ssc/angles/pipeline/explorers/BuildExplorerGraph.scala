@@ -3,7 +3,6 @@ package io.ssc.angles.pipeline.explorers
 import java.io.PrintWriter
 import java.net.URI
 import java.nio.file.{Files, Paths}
-import java.util
 import java.util.Locale
 
 import com.google.common.collect.{BiMap, HashBiMap, HashMultimap, SetMultimap}
@@ -19,6 +18,8 @@ import scala.collection.JavaConversions._
  * Created by xolor on 11.02.15.
  */
 object BuildExplorerGraph extends App {
+  
+  val clusterReadWriter = new ClusterReadWriter
 
   val uriToHost = (uri: URI) => uri.getHost
   val logger = LoggerFactory.getLogger(BuildExplorerGraph.getClass)
@@ -34,14 +35,14 @@ object BuildExplorerGraph extends App {
   val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
   writeGraphCSV("graph_cosine.csv", cosineGraph)
   val cosineClusterMap = calculateClusters(cosineGraph)
-  writeClusterFile("communities_cosine.tsv", cosineClusterMap)
+  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)
 
   // Build graph with jaccard similarity function
   logger.info("Preparing graph with extended jaccard similarity")
   val jaccardGraph = buildGraph(uriToHost, graphGenerator.EXT_JACCARD_SIMILARITY)
   writeGraphCSV("graph_jaccard.csv", jaccardGraph)
   val jaccardClusterMap = calculateClusters(jaccardGraph)
-  writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
+  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
 
 
   def calculateClusters(rawMap: Map[(String, String), Double]): SetMultimap[Int, String] = {
@@ -92,10 +93,9 @@ object BuildExplorerGraph extends App {
 
   def buildGraph(uriToString: (URI => String), similarityFunction: ((RealVector, RealVector) => Double)): Map[(String, String), Double] = {
     logger.info("Invoking graph builder...")
+    
     val startTime = System.currentTimeMillis()
-
     val graph = new GraphGenerator().execute(workingList, uriToString, similarityFunction)
-
     val endTime = System.currentTimeMillis()
 
     logger.info("Graph generation finished within {} ms!", endTime - startTime)
@@ -118,27 +118,5 @@ object BuildExplorerGraph extends App {
     writer.close()
 
     logger.info("Finished csv export!")
-  }
-
-  def writeClusterFile(filename: String, clusterMap: SetMultimap[Int, String]) = {
-    logger.info("Writing cluster file ...")
-
-    var path = Paths.get(filename)
-    var writer = new PrintWriter(Files.newBufferedWriter(path))
-
-    for (t: Tuple2[Int, java.util.Collection[String]] <- clusterMap.asMap()) {
-      val clusterId: Int = t._1
-      val explorerIds: util.Collection[String] = t._2
-      explorerIds.foreach {
-        case explorerId: String => writer.println(explorerId)
-        case any => logger.warn("Skipping invalid value in cluster {}: {}", clusterId, any)
-      }
-      writer.println()
-    }
-
-    writer.flush()
-    writer.close()
-
-    logger.info("Finished cluster export!")
   }
 }
