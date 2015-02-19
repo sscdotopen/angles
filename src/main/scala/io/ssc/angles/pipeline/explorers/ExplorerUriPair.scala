@@ -5,12 +5,12 @@ import java.net.URI
 /**
  * Created by xolor on 11.02.15.
  */
-class ExplorerUriPair (val explorerId : String, val uris : List[URI]) {
+class ExplorerUriPair (val explorerId : String, val uri : URI) {
 
-  def mapURIs(f : (URI) => String) : List[String] = uris.map(f)
+  def mapURI(f : (URI) => String) : String = f(uri)
   
   def this(explorerId : String, uri : String) = {
-    this(explorerId, List(URI.create(uri)))
+    this(explorerId, URI.create(uri))
   }
   
 }
