@@ -34,11 +34,11 @@ object BuildExplorerGraph extends App {
   logger.info("Got {} pairs from CSV", workingList.size)
   
   // Build graph with cosine similarity function
-  logger.info("Preparing graph with cosine similarity")
+  /*logger.info("Preparing graph with cosine similarity")
   val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
   writeGraphCSV("graph_cosine.csv", cosineGraph)
   val cosineClusterMap = calculateClusters(cosineGraph)
-  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)
+  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)*/
 
   // Build graph with jaccard similarity function
   logger.info("Preparing graph with extended jaccard similarity")
@@ -46,6 +46,11 @@ object BuildExplorerGraph extends App {
   writeGraphCSV("graph_jaccard.csv", jaccardGraph)
   val jaccardClusterMap = calculateClusters(jaccardGraph)
   clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
+  
+  val gephiManager = new GephiManager
+  gephiManager.loadGraphMap(jaccardGraph, false)
+  gephiManager.runOpenOrdLayout()
+  gephiManager.exportGraphToPNGImage("graph.png", 2048, 2048)
 
 
   def calculateClusters(rawMap: Map[(String, String), Double]): SetMultimap[Int, String] = {

@@ -20,9 +20,9 @@ object CSVReader {
 
     for (line <- fileBuffer.getLines()) {
       if (!StringUtils.isEmpty(line)) {
-        val separated = StringUtils.split(line, ",", 2)
+        val separated = StringUtils.split(line, ",", 2)   // FIXME: Less split after first comma and treat all the rest as URL
         if (separated.size != 2) {
-          logger.error("CSV row must consist of exactly two values: {}", line)
+          logger.warn("CSV row must consist of exactly two values: {}", line)
         } else {
           val explorer = StringUtils.trim(separated(0))
           var uri = StringUtils.trim(separated(1))
@@ -31,7 +31,7 @@ object CSVReader {
           try {
             resultList += new ExplorerUriPair(explorer, uri)
           } catch {
-            case e: IllegalArgumentException => logger.warn(e.getMessage)
+            case e: IllegalArgumentException => //logger.warn(e.getMessage)
           }
         }
       }
