@@ -21,6 +21,10 @@
             <url>file:${project.basedir}/repo</url>
         </repository>
         <repository>
+            <id>xlrnet-maven-repo</id>
+            <url>http://repo.xlrnet.org/mvn</url>
+        </repository>
+        <repository>
             <id>gephi-snapshots</id>
             <name>Gephi Snapshots</name>
             <url>http://nexus.gephi.org/nexus/content/repositories/snapshots/</url>
@@ -196,6 +200,12 @@
         <dependency>
             <groupId>org.gephi</groupId>
             <artifactId>gephi-toolkit</artifactId>
+            <version>0.8.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gephi</groupId>
+            <artifactId>openord-layout-plugin</artifactId>
             <version>0.8.2</version>
         </dependency>
 
