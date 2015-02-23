@@ -44,12 +44,14 @@ object BuildExplorerGraph extends App {
   logger.info("Preparing graph with extended jaccard similarity")
   val jaccardGraph = buildGraph(uriToHost, graphGenerator.EXT_JACCARD_SIMILARITY)
   writeGraphCSV("graph_jaccard.csv", jaccardGraph)
-  val jaccardClusterMap = calculateClusters(jaccardGraph)
-  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
+  /*val jaccardClusterMap = calculateClusters(jaccardGraph)
+  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)*/
   
   val gephiManager = new GephiManager
   gephiManager.loadGraphMap(jaccardGraph, false)
   gephiManager.runOpenOrdLayout()
+  val jaccardClusterMap = gephiManager.runChineseWhispersClusterer()
+  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
   gephiManager.exportGraphToPNGImage("graph.png", 2048, 2048)
 
 

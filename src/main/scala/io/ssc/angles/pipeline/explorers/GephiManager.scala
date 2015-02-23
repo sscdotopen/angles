@@ -2,6 +2,9 @@ package io.ssc.angles.pipeline.explorers
 
 import java.io.File
 
+import com.google.common.collect.{HashMultimap, SetMultimap}
+import de.uni_leipzig.informatik.asv.gephi.chinesewhispers.ChineseWhispersClusterer
+import org.gephi.clustering.api.Cluster
 import org.gephi.graph.api.{Graph, GraphController, GraphFactory, Node}
 import org.gephi.io.exporter.api.ExportController
 import org.gephi.io.exporter.preview.PNGExporter
@@ -91,6 +94,35 @@ class GephiManager {
       openOrdLayout.goAlgo()
     }
     logger.info("Finished OpenOrd layout!")
+  }
+  
+  def runChineseWhispersClusterer() : SetMultimap[Int, String] = {
+    val graphModel = Lookup.getDefault.lookup(classOf[GraphController]).getModel(workspace)
+    val progressTicket = new GephiProgressTicketImpl
+    val cwClusterer = new ChineseWhispersClusterer
+    
+    logger.info("Running Chinese Whispers clusterer via gephi...")
+
+    cwClusterer.setProgressTicket(progressTicket)
+    cwClusterer.execute(graphModel)
+
+    logger.info("Clustering finished.")
+    logger.info("Generating cluster map...")
+    
+    val clusters : Array[Cluster] = cwClusterer.getClusters
+    
+    var resultMap : SetMultimap[Int, String] = HashMultimap.create()
+    
+    var clusterId = 0
+    
+    for (cluster <- clusters) {
+      for (node <- cluster.getNodes) {
+        resultMap.put(clusterId, node.getNodeData.getId)
+      }
+      clusterId += 1
+    }
+    logger.info("Cluster map generated.")
+    resultMap
   }
 
 }
