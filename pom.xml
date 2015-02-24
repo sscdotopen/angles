@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.ssc</groupId>
     <artifactId>angles</artifactId>
@@ -53,7 +54,7 @@
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -198,24 +199,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.gephi</groupId>
-            <artifactId>gephi-toolkit</artifactId>
-            <version>0.8.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gephi</groupId>
-            <artifactId>openord-layout-plugin</artifactId>
-            <version>0.8.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.codeartisans.thirdparties.swing</groupId>
-            <artifactId>org-openide-util-lookup</artifactId>
-            <version>8.3.1</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.dkhenry</groupId>
             <artifactId>rethinkjava</artifactId>
             <version>0.9</version>
@@ -227,11 +210,36 @@
             <version>2.0.4</version>
         </dependency>
 
+        <!-- Gephi dependencies -->
+        
+        <dependency>
+            <groupId>org.gephi</groupId>
+            <artifactId>gephi-toolkit</artifactId>
+            <version>0.8.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codeartisans.thirdparties.swing</groupId>
+            <artifactId>org-openide-util-lookup</artifactId>
+            <version>8.3.1</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.gephi</groupId>
+            <artifactId>openord-layout-plugin</artifactId>
+            <version>0.8.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.uni_leipzig.informatik.asv.gephi.chinesewhispers</groupId>
+            <artifactId>cw-cluster-plugin</artifactId>
+            <version>0.7</version>
+        </dependency>
+        
     </dependencies>
 
     <!-- END DEPENDENCIES -->
-    
-    
+
 
     <!-- BUILD SETTINGS -->
     <build>

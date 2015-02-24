@@ -20,12 +20,12 @@ object CSVReader {
 
     for (line <- fileBuffer.getLines()) {
       if (!StringUtils.isEmpty(line)) {
-        val separated = StringUtils.split(line, ",", 2)   // FIXME: Less split after first comma and treat all the rest as URL
-        if (separated.size != 2) {
-          logger.warn("CSV row must consist of exactly two values: {}", line)
+        val separated = StringUtils.split(line, ";", 3)   // FIXME: Less split after first comma and treat all the rest as URL
+        if (separated.size != 3) {
+          logger.warn("CSV row must consist of exactly three values: {}", line)
         } else {
           val explorer = StringUtils.trim(separated(0))
-          var uri = StringUtils.trim(separated(1))
+          var uri = StringUtils.trim(separated(2))
           uri = StringUtils.replace(uri, " ", "%20")
           uri = StringUtils.replace(uri, "|", "%7C")
           try {

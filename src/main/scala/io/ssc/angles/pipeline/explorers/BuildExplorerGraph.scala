@@ -52,7 +52,7 @@ object BuildExplorerGraph extends App {
   gephiManager.runOpenOrdLayout()
   val jaccardClusterMap = gephiManager.runChineseWhispersClusterer()
   clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
-  gephiManager.exportGraphToPNGImage("graph.png", 2048, 2048)
+  gephiManager.exportGraphToPNGImage("graph.png", 16384, 16384)
 
 
   def calculateClusters(rawMap: Map[(String, String), Double]): SetMultimap[Int, String] = {
