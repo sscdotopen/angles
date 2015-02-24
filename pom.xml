@@ -22,8 +22,8 @@
             <url>file:${project.basedir}/repo</url>
         </repository>
         <repository>
-            <id>xlrnet-maven-repo</id>
-            <url>http://repo.xlrnet.org/mvn</url>
+            <id>xlrnet-releases</id>
+            <url>http://repo.xlrnet.org/nexus/content/repositories/releases</url>
         </repository>
         <repository>
             <id>gephi-snapshots</id>
