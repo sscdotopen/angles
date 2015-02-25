@@ -28,8 +28,6 @@ object BuildExplorerGraph extends App {
 
   logger.info("Querying database...")
 
-  //val workingList: List[ExplorerUriPair] = RethinkDb.getPairList
-  //logger.info("Got {} pairs from RethinkDB", workingList.size)
   val workingList: List[ExplorerUriPair] = CSVReader.readExplorerPairsFromCSV(csvFile)
   logger.info("Got {} pairs from CSV", workingList.size)
   
@@ -37,22 +35,12 @@ object BuildExplorerGraph extends App {
   logger.info("Preparing graph with cosine similarity")
   val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
   writeGraphCSV("graph_cosine.csv", cosineGraph)
-  /*val cosineClusterMap = calculateClusters(cosineGraph)
-  clusterReadWriter.writeClusterFile("communities_cosine.tsv", cosineClusterMap)*/
+
 
   // Build graph with jaccard similarity function
   logger.info("Preparing graph with extended jaccard similarity")
   val jaccardGraph = buildGraph(uriToHost, graphGenerator.EXT_JACCARD_SIMILARITY)
   writeGraphCSV("graph_jaccard.csv", jaccardGraph)
-  /*val jaccardClusterMap = calculateClusters(jaccardGraph)
-  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)*/
-  
-  /*val gephiManager = new GephiManager
-  gephiManager.loadGraphMap(jaccardGraph, false)
-  gephiManager.runOpenOrdLayout()
-  val jaccardClusterMap = gephiManager.runChineseWhispersClusterer()
-  clusterReadWriter.writeClusterFile("communities_jaccard.tsv", jaccardClusterMap)
-  gephiManager.exportGraphToPNGImage("graph.png", 16384, 16384)*/
 
 
   def calculateClusters(rawMap: Map[(String, String), Double]): SetMultimap[Int, String] = {
