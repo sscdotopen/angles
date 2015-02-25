@@ -38,7 +38,7 @@ class ClusterReadWriter {
   }
 
   def writeClusterFile(filename: String, clusterMap: SetMultimap[Int, String]) = {
-    logger.info("Writing cluster file ...")
+    logger.info("Writing cluster file {} ...", filename)
 
     var path = Paths.get(filename)
     var writer = new PrintWriter(Files.newBufferedWriter(path))

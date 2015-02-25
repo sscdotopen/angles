@@ -20,18 +20,18 @@ object CSVReader {
 
     for (line <- fileBuffer.getLines()) {
       if (!StringUtils.isEmpty(line)) {
-        val separated = StringUtils.split(line, ",", 2)
-        if (separated.size != 2) {
-          logger.error("CSV row must consist of exactly two values: {}", line)
+        val separated = StringUtils.split(line, ";", 3)   // Somehow this doesn't work as expected?!
+        if (separated.size != 3) {
+          logger.warn("The following CSV row must consist of exactly three values: {}", line)
         } else {
-          val explorer = StringUtils.trim(separated(0))
-          var uri = StringUtils.trim(separated(1))
+          val explorer = StringUtils.trim(separated(1))
+          var uri = StringUtils.trim(separated(2))
           uri = StringUtils.replace(uri, " ", "%20")
           uri = StringUtils.replace(uri, "|", "%7C")
           try {
             resultList += new ExplorerUriPair(explorer, uri)
           } catch {
-            case e: IllegalArgumentException => logger.warn(e.getMessage)
+            case e: IllegalArgumentException => //logger.warn(e.getMessage)
           }
         }
       }
