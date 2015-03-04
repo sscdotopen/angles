@@ -74,6 +74,8 @@ object LoadGraphTitan extends App {
     val jaccardSimilarity = mgmt.makePropertyKey("similarity").dataType(classOf[Precision]).make()    // double is not allowed -> have to use precision!
     val similarity = mgmt.makeEdgeLabel("jaccard").make()
     mgmt.buildEdgeIndex(similarity, "jaccard_index", Direction.BOTH, jaccardSimilarity)
+    val name = mgmt.makePropertyKey("name").dataType(classOf[String]).make()
+    mgmt.buildIndex("byName",classOf[Vertex]).addKey(name).buildCompositeIndex()
   }
 
   /**
