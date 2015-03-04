@@ -107,21 +107,20 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
-            <version>4.2.1</version>
+            <version>4.8.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-analyzers-common</artifactId>
-            <version>4.2.1</version>
+            <version>4.8.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-queries</artifactId>
-            <version>4.2.1</version>
+            <version>4.8.1</version>
         </dependency>
-
 
         <dependency>
             <groupId>edu.stanford.nlp</groupId>
@@ -211,7 +210,7 @@
         </dependency>
 
         <!-- Gephi dependencies -->
-        
+
         <dependency>
             <groupId>org.gephi</groupId>
             <artifactId>gephi-toolkit</artifactId>
@@ -223,7 +222,7 @@
             <artifactId>org-openide-util-lookup</artifactId>
             <version>8.3.1</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.gephi</groupId>
             <artifactId>openord-layout-plugin</artifactId>
@@ -235,7 +234,26 @@
             <artifactId>cw-cluster-plugin</artifactId>
             <version>0.7</version>
         </dependency>
-        
+
+        <!-- Titan -->
+        <dependency>
+            <groupId>com.tinkerpop.blueprints</groupId>
+            <artifactId>blueprints-core</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.thinkaurelius.titan</groupId>
+            <artifactId>titan-all</artifactId>
+            <version>0.5.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.tinkerpop.blueprints</groupId>
+            <artifactId>blueprints-rexster-graph</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
     </dependencies>
 
     <!-- END DEPENDENCIES -->
