@@ -1,5 +1,6 @@
 package io.ssc.angles.pipeline.titan
 
+import java.net.URI
 import java.util
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -8,11 +9,12 @@ import com.thinkaurelius.titan.core.TitanGraph
 import com.thinkaurelius.titan.core.attribute.Precision
 import com.thinkaurelius.titan.core.util.TitanCleanup
 import com.tinkerpop.blueprints.util.wrappers.batch.BatchGraph
-import com.tinkerpop.blueprints.{TransactionalGraph, Direction, Vertex}
+import com.tinkerpop.blueprints.{Direction, TransactionalGraph, Vertex}
 import io.ssc.angles.pipeline.explorers.CSVReader
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 
 /**
@@ -77,11 +79,29 @@ object LoadGraphTitan extends App {
 
   def registerIndices(graph: TitanGraph): Unit = {
     val mgmt = graph.getManagementSystem
+
+    // Edge type and index for "jaccard"-edge
     val jaccardSimilarity = mgmt.makePropertyKey("similarity").dataType(classOf[Precision]).make() // double is not allowed -> have to use precision!
     val similarity = mgmt.makeEdgeLabel("jaccard").make()
     mgmt.buildEdgeIndex(similarity, "jaccard_index", Direction.BOTH, jaccardSimilarity)
-    val name = mgmt.makePropertyKey("name").dataType(classOf[String]).make()
-    mgmt.buildIndex("byName", classOf[Vertex]).addKey(name).buildCompositeIndex()
+
+    // Edge type and index for "references"-edge
+    val times = mgmt.makePropertyKey("times").dataType(classOf[Precision]).make() // double is not allowed -> have to use precision!
+    val references = mgmt.makeEdgeLabel("references").make()
+    mgmt.buildEdgeIndex(references, "references", Direction.BOTH, times)
+
+    // Vertex index on property "explorerId"
+    val explorerId = mgmt.makePropertyKey("explorerId").dataType(classOf[String]).make()
+    mgmt.buildIndex("byExplorerId", classOf[Vertex]).addKey(explorerId).buildCompositeIndex()
+    // Vertex index on property "explorerName"
+    val explorerName = mgmt.makePropertyKey("explorerName").dataType(classOf[String]).make()
+    mgmt.buildIndex("byExplorerName", classOf[Vertex]).addKey(explorerId).buildCompositeIndex()
+    // Vertex index on property "url"
+    val url = mgmt.makePropertyKey("url").dataType(classOf[String]).make()
+    mgmt.buildIndex("byUrl", classOf[Vertex]).addKey(url).buildCompositeIndex()
+    // Vertex index on property "vertexKey"
+    val vertexKey = mgmt.makePropertyKey("key").dataType(classOf[String]).make()
+    mgmt.buildIndex("key", classOf[Vertex]).addKey(vertexKey).buildCompositeIndex()
   }
 
   /**
@@ -95,27 +115,45 @@ object LoadGraphTitan extends App {
     // Build a map of all URLs a user has tweeted:
     var explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
     workingList.par.foreach { case triple => {
-      val explorerId = triple._1
-      val uri = triple._3
-      var newValue: util.List[String] = explorerUrlMap.getOrElse(explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
-      newValue += uri
-      explorerUrlMap.update(explorerId, newValue)
+      try {
+        val explorerId = triple._1
+        val uri = URI.create(triple._3)
+        var newValue: util.List[String] = explorerUrlMap.getOrElse(explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
+        newValue += uri.getHost
+        explorerUrlMap.update(explorerId, newValue)
+      } catch {
+        case e : Exception => logger.warn("{}", e.getMessage)
+      }
     }
     }
+
+    val explorerUrlCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
+
+    //s.groupBy(identity).mapValues(_.size)
+
+    val vertexIdMap = new util.HashMap[String, String]()
 
     // Setup key settings
     graph.setVertexIdKey("key")
     graph.setEdgeIdKey("id")    
     
-    explorerUrlMap.foreach { case (explorerId: String, urls: util.List[String]) =>
-      val explorerNode = graph.addVertex(explorerId, "explorerId", explorerId)
+    var id = 0
 
-      urls.foreach { case url :String =>
-          var urlNode : Vertex = graph.getVertex(url)
+    explorerUrlCountMap.foreach { case (explorerId: String, urls: Map[String, Int]) =>
+      var vertexId = vertexIdMap.getOrDefault(explorerId, (() => {id += 1; id.toString}).apply())
+
+      val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId)
+
+      urls.foreach {
+        case (url :String, count: Int) =>
+          vertexId = vertexIdMap.getOrDefault(url, (() => {id += 1; id.toString}).apply())
+          var urlNode : Vertex = graph.getVertex(vertexId)
           if (urlNode == null)
-            urlNode = graph.addVertex(url, "url", url)
+            urlNode = graph.addVertex(vertexId, "url", url)
           
-          graph.addEdge(null, explorerNode, urlNode, "references")
+          val newEdge = graph.addEdge(null, explorerNode, urlNode, "references")
+          newEdge.setProperty("times", count)
+        case _ => logger.warn("Matching failed")
       }
     }
 
