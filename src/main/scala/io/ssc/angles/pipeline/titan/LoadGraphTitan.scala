@@ -38,8 +38,6 @@ object LoadGraphTitan extends App {
     logger.info("Adding indices...")
     registerIndices(titanGraph)
 
-    titanGraph.commit()
-
     var batchGraph = BatchGraph.wrap(titanGraph)
 
     val vertexFile = "pairs.csv"
@@ -102,6 +100,8 @@ object LoadGraphTitan extends App {
     // Vertex index on property "vertexKey"
     val vertexKey = mgmt.makePropertyKey("key").dataType(classOf[String]).make()
     mgmt.buildIndex("key", classOf[Vertex]).addKey(vertexKey).buildCompositeIndex()
+
+    mgmt.commit()
   }
 
   /**
@@ -128,14 +128,11 @@ object LoadGraphTitan extends App {
     }
 
     val explorerUrlCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
-
-    //s.groupBy(identity).mapValues(_.size)
-
     val vertexIdMap = new util.HashMap[String, String]()
 
     // Setup key settings
     graph.setVertexIdKey("key")
-    graph.setEdgeIdKey("id")    
+    graph.setEdgeIdKey("key")
     
     var id = 0
 
@@ -146,57 +143,25 @@ object LoadGraphTitan extends App {
 
       urls.foreach {
         case (url :String, count: Int) =>
-          vertexId = vertexIdMap.getOrDefault(url, (() => {id += 1; id.toString}).apply())
-          var urlNode : Vertex = graph.getVertex(vertexId)
+          var urlVertexId : String = null
+          
+          if (vertexIdMap.containsKey(url)) {
+            urlVertexId = vertexIdMap.get(url)
+          } else {
+            id += 1
+            vertexIdMap.put(url, id.toString)
+            urlVertexId = id.toString
+          }
+
+          var urlNode : Vertex = graph.getVertex(urlVertexId)
           if (urlNode == null)
-            urlNode = graph.addVertex(vertexId, "url", url)
+            urlNode = graph.addVertex(urlVertexId, "url", url)
           
           val newEdge = graph.addEdge(null, explorerNode, urlNode, "references")
           newEdge.setProperty("times", count)
-        case _ => logger.warn("Matching failed")
+        case _ =>
       }
     }
-
-
-
-
-
-    /*var urlVertexMap = mutable.HashMap.empty[String, Vertex]
-    var explorerVertexMap = ParMap.empty[String, Vertex]
-    val explorerCount = explorerUrlMap.size()
-    var i = 1
-    workingList.par.foreach { case (pair: (String, String, String)) => {
-      val explorerId = pair._1
-      val explorerName = pair._2
-      if (!explorerVertexMap.contains(explorerName)) {
-        i += 1
-        logger.info("Importing explorer {} ({}/{})", explorerName, String.valueOf(i), String.valueOf(explorerCount))
-        val urls = explorerUrlMap.get(explorerId)
-        // Import explorer vertex
-        val newExplorerVertex = graph.addVertex(explorerName, "twitterId", explorerId, "name", explorerName)
-        /*newExplorerVertex.setProperty("twitterId", explorerId)
-        newExplorerVertex.setProperty("name", explorerName)*/
-        //newVertex.setProperty("urls", Lists.newArrayList(urls))
-        explorerVertexMap += ((explorerName, newExplorerVertex))
-
-        // Import referenced URLs for the current explorer
-        urls.foreach { case url: String => {
-          var urlVertex : Vertex = null
-          if (urlVertexMap.contains(url)) {
-            urlVertex = urlVertexMap.get(url).get
-          } else {
-            urlVertex = graph.addVertex(url, "url", url) // TODO: Save (also) mapped URI
-            urlVertexMap.put(url, urlVertex)
-          }          
-          try {
-            newExplorerVertex.addEdge("references", urlVertex) // FIXME: add property "times"
-          } catch {
-            case e: Exception => logger.error("An error has occurred: ", e)
-          }
-        }
-        }
-      }
-    }*/
   }
 
 }
