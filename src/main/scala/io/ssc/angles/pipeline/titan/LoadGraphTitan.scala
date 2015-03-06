@@ -9,7 +9,7 @@ import com.thinkaurelius.titan.core.TitanGraph
 import com.thinkaurelius.titan.core.attribute.Precision
 import com.thinkaurelius.titan.core.util.TitanCleanup
 import com.tinkerpop.blueprints.util.wrappers.batch.BatchGraph
-import com.tinkerpop.blueprints.{Direction, TransactionalGraph, Vertex}
+import com.tinkerpop.blueprints.{Direction, Edge, TransactionalGraph, Vertex}
 import io.ssc.angles.pipeline.explorers.CSVReader
 import org.slf4j.LoggerFactory
 
@@ -23,7 +23,7 @@ import scala.collection.mutable
 object LoadGraphTitan extends App {
 
   var logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
-
+  
   override def main(args: Array[String]) {
     logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
     var titanGraph: TitanGraph = TitanConnector.openDefaultGraph()
@@ -76,6 +76,8 @@ object LoadGraphTitan extends App {
 
 
   def registerIndices(graph: TitanGraph): Unit = {
+    val INDEX_BACKEND: String = "search"
+    
     val mgmt = graph.getManagementSystem
 
     // Edge type and index for "jaccard"-edge
@@ -83,23 +85,27 @@ object LoadGraphTitan extends App {
     val similarity = mgmt.makeEdgeLabel("jaccard").make()
     mgmt.buildEdgeIndex(similarity, "jaccard_index", Direction.BOTH, jaccardSimilarity)
 
-    // Edge type and index for "references"-edge
-    val times = mgmt.makePropertyKey("times").dataType(classOf[Precision]).make() // double is not allowed -> have to use precision!
-    val references = mgmt.makeEdgeLabel("references").make()
-    mgmt.buildEdgeIndex(references, "references", Direction.BOTH, times)
+    // mixed index for "references"-edge
+    val timesKey = mgmt.makePropertyKey("times").dataType(classOf[Precision]).make() // double is not allowed -> have to use precision!
+    mgmt.buildIndex("references", classOf[Edge]).addKey(timesKey).buildMixedIndex(INDEX_BACKEND)
 
-    // Vertex index on property "explorerId"
+    // Composite vertex index on property "explorerId"
     val explorerId = mgmt.makePropertyKey("explorerId").dataType(classOf[String]).make()
-    mgmt.buildIndex("byExplorerId", classOf[Vertex]).addKey(explorerId).buildCompositeIndex()
-    // Vertex index on property "explorerName"
+    mgmt.buildIndex("byExplorerId", classOf[Vertex]).addKey(explorerId).unique().buildCompositeIndex()
+    // Mixed vertex index on property "explorerName"
     val explorerName = mgmt.makePropertyKey("explorerName").dataType(classOf[String]).make()
-    mgmt.buildIndex("byExplorerName", classOf[Vertex]).addKey(explorerId).buildCompositeIndex()
-    // Vertex index on property "url"
-    val url = mgmt.makePropertyKey("url").dataType(classOf[String]).make()
-    mgmt.buildIndex("byUrl", classOf[Vertex]).addKey(url).buildCompositeIndex()
-    // Vertex index on property "vertexKey"
+    mgmt.buildIndex("byExplorerName", classOf[Vertex]).addKey(explorerName).buildMixedIndex(INDEX_BACKEND)
+    // Mixed vertex index on property "url"
+    val url = mgmt.makePropertyKey("host").dataType(classOf[String]).make()
+    mgmt.buildIndex("byHost", classOf[Vertex]).addKey(url).buildMixedIndex(INDEX_BACKEND)
+    // Composite vertex index on property "vertexKey"
     val vertexKey = mgmt.makePropertyKey("key").dataType(classOf[String]).make()
     mgmt.buildIndex("key", classOf[Vertex]).addKey(vertexKey).buildCompositeIndex()
+
+    // Composite vertex index on roperty "tweetedUrls"
+    val tweetedUrlsKey = mgmt.makePropertyKey("tweetedUrls").dataType(classOf[Array[String]]).make()
+    mgmt.buildIndex("tweetedUrls", classOf[Vertex]).addKey(tweetedUrlsKey).buildCompositeIndex()
+
 
     mgmt.commit()
   }
@@ -113,7 +119,7 @@ object LoadGraphTitan extends App {
   def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)]) = {
 
     // Build a map of all URLs a user has tweeted:
-    var explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
+    val explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
     workingList.par.foreach { case triple => {
       try {
         val explorerId = triple._1
@@ -127,7 +133,7 @@ object LoadGraphTitan extends App {
     }
     }
 
-    val explorerUrlCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
+    val explorerHostCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
     val vertexIdMap = new util.HashMap[String, String]()
 
     // Setup key settings
@@ -136,26 +142,27 @@ object LoadGraphTitan extends App {
     
     var id = 0
 
-    explorerUrlCountMap.foreach { case (explorerId: String, urls: Map[String, Int]) =>
+    explorerHostCountMap.foreach { case (explorerId: String, urls: Map[String, Int]) =>
       var vertexId = vertexIdMap.getOrDefault(explorerId, (() => {id += 1; id.toString}).apply())
 
       val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId)
+      //explorerNode.setProperty("tweetedUrls", explorerUrlMap.get(explorerId).toArray.asInstanceOf[Array[String]])
 
       urls.foreach {
-        case (url :String, count: Int) =>
+        case (host :String, count: Int) =>
           var urlVertexId : String = null
           
-          if (vertexIdMap.containsKey(url)) {
-            urlVertexId = vertexIdMap.get(url)
+          if (vertexIdMap.containsKey(host)) {
+            urlVertexId = vertexIdMap.get(host)
           } else {
             id += 1
-            vertexIdMap.put(url, id.toString)
+            vertexIdMap.put(host, id.toString)
             urlVertexId = id.toString
           }
 
           var urlNode : Vertex = graph.getVertex(urlVertexId)
           if (urlNode == null)
-            urlNode = graph.addVertex(urlVertexId, "url", url)
+            urlNode = graph.addVertex(urlVertexId, "host", host)
           
           val newEdge = graph.addEdge(null, explorerNode, urlNode, "references")
           newEdge.setProperty("times", count)
