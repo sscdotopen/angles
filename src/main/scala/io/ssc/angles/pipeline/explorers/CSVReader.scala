@@ -25,9 +25,7 @@ object CSVReader {
           logger.warn("The following CSV row must consist of exactly three values: {}", line)
         } else {
           val explorer = StringUtils.trim(separated(1))
-          var uri = StringUtils.trim(separated(2))
-          uri = StringUtils.replace(uri, " ", "%20")
-          uri = StringUtils.replace(uri, "|", "%7C")
+          var uri = HelperUtils.escapeURIString(separated(2))
           try {
             resultList += new ExplorerUriPair(explorer, uri)
           } catch {

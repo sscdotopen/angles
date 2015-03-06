@@ -184,16 +184,10 @@ class GraphGenerator {
     }
     }
     
-    /*var explorerSpace = collection.mutable.HashMap.empty[String, RealVector]*/
-
     // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
     explorerSpace.par.map {
       case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
     }.seq.toMap
-    /*for ((s: String, v: RealVector) <- tmpSpace) {
-        explorerSpace += ((s, v.ebeMultiply(idfVector)))
-    }
-    explorerSpace.toMap*/
   }
 
   /**
