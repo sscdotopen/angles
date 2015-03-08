@@ -10,7 +10,7 @@ import com.thinkaurelius.titan.core.attribute.Precision
 import com.thinkaurelius.titan.core.util.TitanCleanup
 import com.tinkerpop.blueprints.util.wrappers.batch.BatchGraph
 import com.tinkerpop.blueprints.{Direction, Edge, TransactionalGraph, Vertex}
-import io.ssc.angles.pipeline.explorers.{HelperUtils, CSVReader}
+import io.ssc.angles.pipeline.explorers.{ClusterSet, ClusterReadWriter, HelperUtils, CSVReader}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -25,6 +25,7 @@ object LoadGraphTitan extends App {
   var logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
   
   override def main(args: Array[String]) {
+    val clusterReader = new ClusterReadWriter
     logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
     var titanGraph: TitanGraph = TitanConnector.openDefaultGraph()
 
@@ -37,6 +38,11 @@ object LoadGraphTitan extends App {
 
     logger.info("Adding indices...")
     registerIndices(titanGraph)
+    
+    if (titanGraph.isClosed) {
+      logger.info("Reopening graph again...")
+      titanGraph = TitanConnector.openDefaultGraph()
+    }
 
     var batchGraph = BatchGraph.wrap(titanGraph)
 
@@ -46,10 +52,13 @@ object LoadGraphTitan extends App {
     logger.info("Reading vertices from CSV...")
     val workingList: Set[(String, String, String)] = CSVReader.readTuplesFromCSV(vertexFile)
     logger.info("Got {} pairs from CSV", workingList.size)
-
+    
+    logger.info("Reading cluster data")
+    val jaccardClusters: ClusterSet = clusterReader.readClusterFile("communities_jaccard.tsv")
+    val cosineClusters: ClusterSet = clusterReader.readClusterFile("communities_cosine.tsv")
     logger.info("Adding vertices ...")
 
-    addVertices(batchGraph, workingList)
+    addVertices(batchGraph, workingList, cosineClusters, jaccardClusters)
 
     /*logger.info("Reading edges from CSV...")
     val graphData: Map[(String, String), Double] = CalculateClusters.readGraphCSV(graphFile)
@@ -80,6 +89,8 @@ object LoadGraphTitan extends App {
     
     val mgmt = graph.getManagementSystem
 
+    mgmt.set("storage.cassandra.replication-factor", 2)
+    
     // Edge type and index for "jaccard"-edge
     val jaccardSimilarity = mgmt.makePropertyKey("similarity").dataType(classOf[Precision]).make() // double is not allowed -> have to use precision!
     val similarity = mgmt.makeEdgeLabel("jaccard").make()
@@ -98,17 +109,31 @@ object LoadGraphTitan extends App {
     // Composite vertex index on property "explorerName"
     mgmt.buildIndex("explorerName", classOf[Vertex]).addKey(explorerName).buildCompositeIndex()
     // Mixed vertex index on property "host"
-    val url = mgmt.makePropertyKey("host").dataType(classOf[String]).make()
-    mgmt.buildIndex("host_search", classOf[Vertex]).addKey(url).buildMixedIndex(INDEX_BACKEND)
+    val host = mgmt.makePropertyKey("host").dataType(classOf[String]).make()
+    mgmt.buildIndex("host_search", classOf[Vertex]).addKey(host).buildMixedIndex(INDEX_BACKEND)
     // Mixed vertex index on property "host"
-    mgmt.buildIndex("host", classOf[Vertex]).addKey(url).buildCompositeIndex()
+    mgmt.buildIndex("host", classOf[Vertex]).addKey(host).buildCompositeIndex()
     // Composite vertex index on property "vertexKey"
     val vertexKey = mgmt.makePropertyKey("key").dataType(classOf[String]).make()
     mgmt.buildIndex("key", classOf[Vertex]).addKey(vertexKey).buildCompositeIndex()
 
-    // Composite vertex index on roperty "tweetedUrls"
+    // Composite vertex index on property "tweetedUrls"
     val tweetedUrlsKey = mgmt.makePropertyKey("tweetedUrls").dataType(classOf[Array[String]]).make()
     mgmt.buildIndex("tweetedUrls", classOf[Vertex]).addKey(tweetedUrlsKey).buildCompositeIndex()
+
+    // Composite and mixed vertex index on property "cosineCluster"
+    val cosineClusterKey = mgmt.makePropertyKey("cosineCluster").dataType(classOf[Integer]).make()
+    mgmt.buildIndex("cosineCluster", classOf[Vertex]).addKey(cosineClusterKey).buildCompositeIndex()
+    mgmt.buildIndex("cosineCluster_search", classOf[Vertex]).addKey(cosineClusterKey).buildMixedIndex(INDEX_BACKEND)
+
+    // Composite and mixed vertex index on property "jaccardCluster"
+    val jaccardClusterKey = mgmt.makePropertyKey("jaccardCluster").dataType(classOf[Integer]).make()
+    mgmt.buildIndex("jaccardCluster", classOf[Vertex]).addKey(jaccardClusterKey).buildCompositeIndex()
+    mgmt.buildIndex("jaccardCluster_search", classOf[Vertex]).addKey(jaccardClusterKey).buildMixedIndex(INDEX_BACKEND)
+
+    // Composite and mixed vertex index on both properties "jaccardCluster" and "cosineCluster"
+    mgmt.buildIndex("jaccardCosineCluster", classOf[Vertex]).addKey(jaccardClusterKey).addKey(cosineClusterKey).buildCompositeIndex()
+    mgmt.buildIndex("jaccardCosineCluster_search", classOf[Vertex]).addKey(jaccardClusterKey).addKey(cosineClusterKey).buildMixedIndex(INDEX_BACKEND)
 
 
     mgmt.commit()
@@ -120,7 +145,7 @@ object LoadGraphTitan extends App {
    * @param workingList List of triples to add (explorerId : String, explorerName : String, uri : String)
    * @return
    */
-  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)]) = {
+  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)], jaccardClusters : ClusterSet, cosineClusters : ClusterSet) = {
 
     // Build a map of all URLs a user has tweeted:
     val explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
@@ -151,8 +176,18 @@ object LoadGraphTitan extends App {
       var vertexId = vertexIdMap.getOrDefault(explorerId, (() => {id += 1; id.toString}).apply())
 
       val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId)
-      explorerNode.setProperty("explorerName", explorerIdNameMap.get(explorerId))
-      
+      val explorerName: String = explorerIdNameMap.get(explorerId).get
+      explorerNode.setProperty("explorerName", explorerName)
+      // Find cosine cluster for explorer
+      val cosineClusterIdForExplorer: util.Set[Int] = cosineClusters.getClusterIdsForExplorer(explorerName)      
+      if (cosineClusterIdForExplorer.size() != 0) {
+        explorerNode.setProperty("cosineCluster", cosineClusterIdForExplorer.iterator().next())
+      }
+      // Find jaccard cluster for explorer
+      val jaccardClusterIdsForExplorer: util.Set[Int] = jaccardClusters.getClusterIdsForExplorer(explorerName)
+      if (jaccardClusterIdsForExplorer.size() != 0) {
+        explorerNode.setProperty("jaccardCluster", jaccardClusterIdsForExplorer.iterator().next())
+      }
       //explorerNode.setProperty("tweetedUrls", explorerUrlMap.get(explorerId).toArray.asInstanceOf[Array[String]])
 
       urls.foreach {
