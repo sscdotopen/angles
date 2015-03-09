@@ -5,7 +5,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
-import org.apache.commons.math.linear.{OpenMapRealVector, RealVector}
+import org.apache.commons.math3.linear.{OpenMapRealVector, RealVector}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -50,8 +50,15 @@ class GraphGenerator {
     // Collect all urls for each explorer
     val explorerUrlMap: Map[String, java.util.List[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
 
+    logger.info("Calculating IDF vector")
+    // Count "df" i.e. how many users tweeted a URI
+    val urlCountMap: Map[String, Int] = calculateUrlCountMap(inputSet, urlMappingFunction)
+    // Calculate the IDF vector
+    val idfVector: RealVector = calculateIdfVector(explorerUrlMap, urlCountMap, dimensionMap)
+
+    logger.info("Building vector space")
     // Convert to real mathematical vectors with x dimensions
-    val explorerSpace: Map[String, RealVector] = buildExplorerSpace(dimensionMap, explorerUrlMap)
+    val explorerSpace: Map[String, RealVector] = buildExplorerSpace(dimensionMap, explorerUrlMap, idfVector)
     logger.info("Built vector space of {} explorers", explorerSpace.size)
 
     // Calculate the similarity
@@ -59,6 +66,54 @@ class GraphGenerator {
     logger.info("Calculated {} similarities", similarityPairs.size)
 
     similarityPairs
+  }
+
+  /**
+   * Calculate the IDF vector.
+   *
+   * @param explorerUrlMap
+   * @param urlCountMap
+   * @param dimensionMap
+   * @return
+   */
+  def calculateIdfVector(explorerUrlMap: Map[String, java.util.List[String]], urlCountMap: Map[String, Int], dimensionMap: Map[String, Int]): RealVector = {
+    val explorerCount = explorerUrlMap.size
+    val idfVector = new OpenMapRealVector(dimensionMap.size)
+
+    urlCountMap.foreach {
+      case (url: String, df: Int) =>
+        val dimension = dimensionMap.get(url)
+        val value = Math.log(explorerCount / df)
+
+        if (dimension.isEmpty)
+          logger.warn("Dimension for url {} could not be found - check url mapping function", url)
+        else
+          idfVector.setEntry(dimension.get, value)
+    }
+    idfVector
+  }
+
+  /**
+   * Count by how many users a URI was tweeted. This will become something like the "IDF" of TF-IDF.
+   * @param pairs Input set of clusterable tweets with URIs and explorer id.
+   * @param uriToString Function for mapping a URI to a String
+   */
+  def calculateUrlCountMap(pairs: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, Int] = {
+    var urlExplorerCount: ConcurrentHashMap[String, Int] = new ConcurrentHashMap[String, Int]
+
+    // This map will contain
+    pairs.par.map((pair: ExplorerUriPair) => (uriToString(pair.uri), pair.explorerId)
+    ).distinct.seq.foreach {
+      case (null, explorer) =>
+        logger.warn("Url became null for explorer {} - check your URL mapping function", explorer)
+      case pair =>
+        urlExplorerCount.put(pair._1, (() => {
+          var v = urlExplorerCount.getOrDefault(pair._1, 0)
+          v + 1
+        })())
+    }
+
+    urlExplorerCount.toMap
   }
 
   /**
@@ -116,20 +171,23 @@ class GraphGenerator {
   /**
    * Convert the previously generated explorer-uri map into a real vector space. 
    */
-  private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, java.util.List[String]]): Map[String, RealVector] = {
+  private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, java.util.List[String]], idfVector: RealVector): Map[String, RealVector] = {
     var explorerSpace: ConcurrentHashMap[String, RealVector] = new ConcurrentHashMap[String, RealVector]
 
     explorerUrlMap.par.foreach { case tuple => {
-          val name = tuple._1
-          val urls = tuple._2
-          // Convert the list representation to a mathematical vector
-          val vector: RealVector = new OpenMapRealVector(dimensionMap.size)
-          urls.foreach(url => vector.setEntry(dimensionMap.get(url).get, vector.getEntry(dimensionMap.get(url).get) + 1))
-          explorerSpace += ((name, vector))
-        }
+      val name = tuple._1
+      val urls = tuple._2
+      // Convert the list representation to a mathematical vector
+      val vector: RealVector = new OpenMapRealVector(dimensionMap.size)
+      urls.foreach(url => vector.setEntry(dimensionMap.get(url).get, vector.getEntry(dimensionMap.get(url).get) + 1))
+      explorerSpace += ((name, vector))
     }
-
-    explorerSpace.toMap
+    }
+    
+    // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
+    explorerSpace.par.map {
+      case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
+    }.seq.toMap
   }
 
   /**

@@ -63,7 +63,7 @@ object SimilarDocuments extends App {
   while (!break) {
     bytesRef = termEnum.next()
     if (bytesRef != null) {
-      if (termEnum.seekExact(bytesRef, true)) {
+      if (termEnum.seekExact(bytesRef)) {
         val term = bytesRef.utf8ToString()
         val idf = tfidfSimilarity.idf(termEnum.docFreq, reader.numDocs)
         //println(term + " " + idf)
@@ -86,7 +86,7 @@ object SimilarDocuments extends App {
   while (!break2) {
     bytesRef2 = termEnum2.next()
     if (bytesRef2 != null) {
-      if (termEnum2.seekExact(bytesRef2, true)) {
+      if (termEnum2.seekExact(bytesRef2)) {
         val term = bytesRef2.utf8ToString()
         docsEnum = termEnum2.docs(null, docsEnum)
 

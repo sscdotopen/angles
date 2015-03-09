@@ -8,7 +8,7 @@ import java.util.Locale
 import com.google.common.collect.{BiMap, HashBiMap, HashMultimap, SetMultimap}
 import edu.ucla.sspace.graph.{ChineseWhispersClustering, Graphs, SimpleWeightedEdge, SparseUndirectedGraph}
 import edu.ucla.sspace.util.MultiMap
-import org.apache.commons.math.linear.RealVector
+import org.apache.commons.math3.linear.RealVector
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -26,7 +26,7 @@ object BuildExplorerGraph extends App {
   val logger = LoggerFactory.getLogger(BuildExplorerGraph.getClass)
   val graphGenerator = new GraphGenerator
 
-  logger.info("Querying database...")
+  logger.info("Querying datastore...")
 
   val workingList: List[ExplorerUriPair] = CSVReader.readExplorerPairsFromCSV(csvFile)
   logger.info("Got {} pairs from CSV", workingList.size)
