@@ -5,7 +5,7 @@ import java.util
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
-import com.thinkaurelius.titan.core.TitanGraph
+import com.thinkaurelius.titan.core.{TitanTransaction, TitanGraph}
 import com.thinkaurelius.titan.core.attribute.Precision
 import com.thinkaurelius.titan.core.util.TitanCleanup
 import com.tinkerpop.blueprints.{Direction, Edge, Vertex}
@@ -57,7 +57,9 @@ object LoadGraphTitan extends App {
     val cosineClusters: ClusterSet = clusterReader.readClusterFile("communities_cosine.tsv")
     logger.info("Adding vertices ...")
 
-    addVertices(titanGraph, workingList, cosineClusters, jaccardClusters)
+    val tx = titanGraph.newTransaction()    
+    addVertices(tx, workingList, cosineClusters, jaccardClusters)
+    tx.commit()
 
     /*logger.info("Reading edges from CSV...")
     val graphData: Map[(String, String), Double] = CalculateClusters.readGraphCSV(graphFile)
@@ -150,7 +152,7 @@ object LoadGraphTitan extends App {
    * @param workingList List of triples to add (explorerId : String, explorerName : String, uri : String)
    * @return
    */
-  def addVertices(graph: TitanGraph, workingList: Set[(String, String, String)], jaccardClusters: ClusterSet, cosineClusters: ClusterSet) = {
+  def addVertices(graph: TitanTransaction, workingList: Set[(String, String, String)], jaccardClusters: ClusterSet, cosineClusters: ClusterSet) = {
 
     // Build a map of all URLs a user has tweeted:
     val explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
@@ -178,9 +180,9 @@ object LoadGraphTitan extends App {
     var id = 0
 
     explorerHostCountMap.foreach { case (explorerId: String, urls: Map[String, Int]) =>
-      /*var vertex : Vertex = vertexIdMap.getOrDefault(explorerId, (() => {
-        id += 1; id.toString
-      }).apply())*/
+      logger.info("Adding explorer {}/{}", id, explorerHostCountMap.size)
+      
+      id += 1
 
       val explorerNode = graph.addVertexWithLabel("explorer")
       explorerNode.setProperty("explorerId", explorerId)
