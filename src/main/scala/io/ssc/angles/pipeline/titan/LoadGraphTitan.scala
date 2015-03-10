@@ -29,7 +29,7 @@ object LoadGraphTitan extends App {
     yield (key, map1.getOrElse(key, 0d).asInstanceOf[Double], map2.getOrElse(key, 0d).asInstanceOf[Double])
   }
 
-  
+
   def readSimiliarities(): Map[(String, String), (Double, Double)] = {
     logger.info("Reading jaccard similarities...")
     val jaccardSimilarities = CalculateClusters.readGraphCSV("graph_jaccard.csv")
@@ -38,43 +38,43 @@ object LoadGraphTitan extends App {
 
     var outMap = mutable.HashMap.empty[(String, String), (Double, Double)]
 
-    // Merge the data, so that we don't have any reflexivity i.e. if there is (x,y) there is no (y,x) 
+    // Merge the data, so that we don't have any reflexivity i.e. if there is (x,y) there may be no (y,x)
     logger.info("Merging similarities...")
     zipper(cosineSimilarities, jaccardSimilarities).foreach { case ((left, right), cosine, jaccard) =>
       var mapValue = outMap.getOrElse((left, right), outMap.getOrElse((right, left), (0d, 0d)))
-      
-      if (cosine != 0d && jaccard != 0d && !mapValue.equals((0d,0d)))
-        throw new IllegalStateException("Mysterious third?! Merging similarities encountered critical error on " + ((left, right), cosine, jaccard))
-      
+
+      if (cosine != 0d && jaccard != 0d && !mapValue.equals((0d, 0d)))
+        throw new IllegalStateException("Mysterious third?! Merging similarities encountered critical error on " +((left, right), cosine, jaccard))
+
       if (cosine != 0d)
         mapValue = (cosine, mapValue._2)
-      else
-        mapValue = (mapValue._1, cosine)      
+      if (jaccard != 0d)
+        mapValue = (mapValue._1, jaccard)
 
-      if (outMap.contains((right,left))) {
+      if (outMap.contains((right, left))) {
         outMap.put((right, left), mapValue)
       } else {
-        outMap.put((left, right), mapValue)        
+        outMap.put((left, right), mapValue)
       }
     }
     outMap.toMap
   }
 
   def addSimilarityEdges(graph: BatchGraph[_ <: TransactionalGraph], similarityMap: Map[(String, String), (Double, Double)], explorerVertexIdMap: util.HashMap[String, String]) = {
-      val total = similarityMap.size
-      var current = 0
-    
-      similarityMap.foreach{case ((in, out), (cosine, jaccard)) =>
-        if (current % 50 == 0)
-          logger.info("Adding similarity edge {}/{}", current, total)
-        current += 1
-        
-        val outVertex = graph.getVertex(explorerVertexIdMap.get(in))
-        val inVertex = graph.getVertex(explorerVertexIdMap.get(out))
-        val edge = outVertex.addEdge("similiar", inVertex)
-        edge.setProperty("cosine", cosine)
-        edge.setProperty("jaccard", jaccard)        
-      }    
+    val total = similarityMap.size
+    var current = 0
+
+    similarityMap.foreach { case ((in, out), (cosine, jaccard)) =>
+      if (current % 50 == 0)
+        logger.info("Adding similarity edge {}/{}", current, total)
+      current += 1
+
+      val outVertex = graph.getVertex(explorerVertexIdMap.get(in))
+      val inVertex = graph.getVertex(explorerVertexIdMap.get(out))
+      val edge = outVertex.addEdge("similiar", inVertex)
+      edge.setProperty("cosine", cosine)
+      edge.setProperty("jaccard", jaccard)
+    }
   }
 
   override def main(args: Array[String]) {
@@ -106,15 +106,14 @@ object LoadGraphTitan extends App {
     val workingList: Set[(String, String, String)] = CSVReader.readTuplesFromCSV(vertexFile)
     logger.info("Got {} pairs from CSV", workingList.size)
 
-    val similarities = readSimiliarities()
-
     logger.info("Reading cluster data")
     val jaccardClusters: ClusterSet = clusterReader.readClusterFile("communities_jaccard.tsv")
     val cosineClusters: ClusterSet = clusterReader.readClusterFile("communities_cosine.tsv")
-    
+
     logger.info("Adding vertices ...")
     val vertexIdMap = addVertices(batchGraph, workingList, cosineClusters, jaccardClusters)
-    
+
+    val similarities = readSimiliarities()
     logger.info("Adding similarity edges...")
     addSimilarityEdges(batchGraph, similarities, vertexIdMap)
 
@@ -208,7 +207,7 @@ object LoadGraphTitan extends App {
     }
     val explorerIdNameMap: Map[String, String] = workingList.par.map((t: Tuple3[String, String, String]) => (t._1, t._2)).toMap.seq
     val explorerHostCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
-    val vertexIdMap = new util.HashMap[String, String]()      // Map explorerId to temporaryVertex id
+    val vertexIdMap = new util.HashMap[String, String]() // Map explorerId to temporaryVertex id
 
     // Setup key settings
     graph.setVertexIdKey("key")
@@ -222,7 +221,7 @@ object LoadGraphTitan extends App {
       if (currentExplorer % 50 == 0)
         logger.info("Adding explorer {}/{}", currentExplorer, totalExplorers)
       currentExplorer += 1
-      
+
       val vertexId = vertexIdMap.getOrDefault(explorerId, (() => {
         id += 1
         id.toString
@@ -247,11 +246,11 @@ object LoadGraphTitan extends App {
         case (host: String, count: Int) =>
           var urlVertexId: String = null
 
-          if (vertexIdMap.containsKey("___" +host)) {
-            urlVertexId = vertexIdMap.get("___" +host)
+          if (vertexIdMap.containsKey("___" + host)) {
+            urlVertexId = vertexIdMap.get("___" + host)
           } else {
             id += 1
-            vertexIdMap.put("___" +host, id.toString)
+            vertexIdMap.put("___" + host, id.toString)
             urlVertexId = id.toString
           }
 
