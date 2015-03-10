@@ -25,26 +25,6 @@ object HelperUtils {
     val uriPreParam = StringUtils.substring(uriTemp, 0, paramSlashPos + 1)
 
     uriParams = StringUtils.replaceEach(uriParams, toReplace, replaceWith)
-    
-    /*uriTemp = StringUtils.replace(uriTemp, " ", "%20")
-    uriTemp = StringUtils.replace(uriTemp, "|", "%7C")
-    uriTemp = StringUtils.replace(uriTemp, ";", "%3B")
-    uriTemp = StringUtils.replace(uriTemp, "(", "%28")
-    uriTemp = StringUtils.replace(uriTemp, ")", "%29")
-    uriTemp = StringUtils.replace(uriTemp, "[", "%5B")
-    uriTemp = StringUtils.replace(uriTemp, "]", "%5D")
-    uriTemp = StringUtils.replace(uriTemp, ",", "%2C")
-    uriTemp = StringUtils.replace(uriTemp, "\"", "%22")
-    uriTemp = StringUtils.replace(uriTemp, "'", "%27")
-    uriTemp = StringUtils.replace(uriTemp, ":", "%3A")
-    uriTemp = StringUtils.replace(uriTemp, "!", "%21")
-    uriTemp = StringUtils.replace(uriTemp, "-", "%2D")
-    uriTemp = StringUtils.replace(uriTemp, "@", "%40")
-    uriTemp = StringUtils.replace(uriTemp, "{", "%7B")
-    uriTemp = StringUtils.replace(uriTemp, "|", "%7C")
-    uriTemp = StringUtils.replace(uriTemp, "}", "%7D")
-    uriTemp = StringUtils.replace(uriTemp, "<", "%3C")
-    uriTemp = StringUtils.replace(uriTemp, ">", "%3D")*/
 
     uriPreParam + uriParams
   }
