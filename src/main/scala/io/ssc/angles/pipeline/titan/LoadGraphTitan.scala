@@ -212,7 +212,7 @@ object LoadGraphTitan extends App {
     }
     val explorerIdNameMap: Map[String, String] = workingList.par.map((t: Tuple3[String, String, String]) => (t._1, t._2)).toMap.seq
     val explorerHostCountMap: mutable.Map[String, Map[String, Int]] = explorerUrlMap.map((s: (String, util.List[String])) => (s._1, s._2.groupBy(identity).mapValues(_.size)))
-    val vertexIdMap = new util.HashMap[String, String]() // Map explorerId to temporaryVertex id
+    val vertexIdMap = new util.HashMap[String, String]() // Map explorerName (?) to temporaryVertex id
 
     // Setup key settings
     graph.setVertexIdKey("key")
@@ -226,14 +226,15 @@ object LoadGraphTitan extends App {
       if (currentExplorer % 50 == 0)
         logger.info("Adding explorer {}/{}", currentExplorer, totalExplorers)
       currentExplorer += 1
+      
+      val explorerName: String = explorerIdNameMap.get(explorerId).get
 
-      val vertexId = vertexIdMap.getOrDefault(explorerId, (() => {
+      val vertexId = vertexIdMap.getOrDefault(explorerName, (() => {
         id += 1
         id.toString
       }).apply())
 
       val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId)
-      val explorerName: String = explorerIdNameMap.get(explorerId).get
       explorerNode.setProperty("explorerName", explorerName)
       // Find cosine cluster for explorer
       val cosineClusterIdForExplorer: util.Set[Int] = cosineClusters.getClusterIdsForExplorer(explorerName)
