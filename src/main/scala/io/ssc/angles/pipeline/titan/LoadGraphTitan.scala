@@ -229,7 +229,7 @@ object LoadGraphTitan extends App {
       
       val explorerName: String = explorerIdNameMap.get(explorerId).get
 
-      val vertexId = vertexIdMap.getOrDefault(explorerName, (() => {
+      val vertexId = vertexIdMap.getOrElseUpdate(explorerName, (() => {
         id += 1
         id.toString
       }).apply())
