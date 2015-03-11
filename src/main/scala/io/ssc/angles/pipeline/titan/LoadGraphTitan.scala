@@ -87,7 +87,6 @@ object LoadGraphTitan extends App {
     logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
     var titanGraph: TitanGraph = TitanConnector.openDefaultGraph()
 
-    val similarities = readSimiliarities()
     logger.info("Removing existing titan graph ...")
     titanGraph.shutdown()
     TitanCleanup.clear(titanGraph)
@@ -102,7 +101,6 @@ object LoadGraphTitan extends App {
       logger.info("Reopening graph again...")
       titanGraph = TitanConnector.openDefaultGraph()
     }
-
 
     var batchGraph = BatchGraph.wrap(titanGraph)
     val vertexFile = "pairs.csv"
@@ -119,6 +117,8 @@ object LoadGraphTitan extends App {
     logger.info("Adding vertices ...")
 
     val vertexIdMap = addVertices(batchGraph, workingList, cosineClusters, jaccardClusters)
+    
+    val similarities = readSimiliarities()
     logger.info("Adding similarity edges...")
     addSimilarityEdges(batchGraph, similarities, vertexIdMap)
 
