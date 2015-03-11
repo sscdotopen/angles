@@ -73,7 +73,7 @@ object LoadGraphTitan extends App {
       val inVertex = graph.getVertex(explorerVertexIdMap.get(out))
       
       if (outVertex == null || inVertex == null) {
-        logger.warn("Vertex for id {} or id {} is null", in, out)        
+        logger.warn("Vertex for id {} or id {} is {}", in.toString, out.toString, null)
       } else {
         val edge = outVertex.addEdge("similiar", inVertex)
         edge.setProperty("cosine", cosine)
@@ -87,6 +87,7 @@ object LoadGraphTitan extends App {
     logger = LoggerFactory.getLogger(LoadGraphTitan.getClass)
     var titanGraph: TitanGraph = TitanConnector.openDefaultGraph()
 
+    val similarities = readSimiliarities()
     logger.info("Removing existing titan graph ...")
     titanGraph.shutdown()
     TitanCleanup.clear(titanGraph)
@@ -102,23 +103,22 @@ object LoadGraphTitan extends App {
       titanGraph = TitanConnector.openDefaultGraph()
     }
 
+
     var batchGraph = BatchGraph.wrap(titanGraph)
-
     val vertexFile = "pairs.csv"
-    val graphFile: String = "graph_jaccard.csv"
 
+    val graphFile: String = "graph_jaccard.csv"
     logger.info("Reading vertices from CSV...")
     val workingList: Set[(String, String, String)] = CSVReader.readTuplesFromCSV(vertexFile)
     logger.info("Got {} pairs from CSV", workingList.size)
 
     logger.info("Reading cluster data")
     val jaccardClusters: ClusterSet = clusterReader.readClusterFile("communities_jaccard.tsv")
+
     val cosineClusters: ClusterSet = clusterReader.readClusterFile("communities_cosine.tsv")
-
     logger.info("Adding vertices ...")
-    val vertexIdMap = addVertices(batchGraph, workingList, cosineClusters, jaccardClusters)
 
-    val similarities = readSimiliarities()
+    val vertexIdMap = addVertices(batchGraph, workingList, cosineClusters, jaccardClusters)
     logger.info("Adding similarity edges...")
     addSimilarityEdges(batchGraph, similarities, vertexIdMap)
 
