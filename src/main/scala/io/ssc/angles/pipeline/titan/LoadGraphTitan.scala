@@ -71,9 +71,14 @@ object LoadGraphTitan extends App {
 
       val outVertex = graph.getVertex(explorerVertexIdMap.get(in))
       val inVertex = graph.getVertex(explorerVertexIdMap.get(out))
-      val edge = outVertex.addEdge("similiar", inVertex)
-      edge.setProperty("cosine", cosine)
-      edge.setProperty("jaccard", jaccard)
+      
+      if (outVertex == null || inVertex == null) {
+        logger.warn("Vertex for id {} or id {} is null", in, out)        
+      } else {
+        val edge = outVertex.addEdge("similiar", inVertex)
+        edge.setProperty("cosine", cosine)
+        edge.setProperty("jaccard", jaccard)
+      }
     }
   }
 
