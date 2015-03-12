@@ -22,7 +22,9 @@ object BuildExplorerGraph extends App {
   
   val clusterReadWriter = new ClusterReadWriter
 
-  val uriToHost = (uri: URI) => uri.getHost
+  //val uriToHost = (uri: URI) => uri.getHost
+  val uriToSecondLevelDomain = (uri: URI) => if (uri.getHost != null) uri.getHost.split("\\.").takeRight(2).mkString(".") else null
+
   val logger = LoggerFactory.getLogger(BuildExplorerGraph.getClass)
   val graphGenerator = new GraphGenerator
 
@@ -33,13 +35,13 @@ object BuildExplorerGraph extends App {
   
   // Build graph with cosine similarity function
   logger.info("Preparing graph with cosine similarity")
-  val cosineGraph = buildGraph(uriToHost, graphGenerator.COSINE_SIMILARITY)
+  val cosineGraph = buildGraph(uriToSecondLevelDomain, graphGenerator.COSINE_SIMILARITY)
   writeGraphCSV("graph_cosine.csv", cosineGraph)
 
 
   // Build graph with jaccard similarity function
   logger.info("Preparing graph with extended jaccard similarity")
-  val jaccardGraph = buildGraph(uriToHost, graphGenerator.EXT_JACCARD_SIMILARITY)
+  val jaccardGraph = buildGraph(uriToSecondLevelDomain, graphGenerator.EXT_JACCARD_SIMILARITY)
   writeGraphCSV("graph_jaccard.csv", jaccardGraph)
 
 
@@ -61,7 +63,7 @@ object BuildExplorerGraph extends App {
         vertexCount += 1
         vertexCount
       })())
-      // Add edge to graph
+      // Add edge to graph                                                                         gi
       graph.add(new SimpleWeightedEdge(leftVertexId, rightVertexId, weight))
     }
     }
