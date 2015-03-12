@@ -203,7 +203,7 @@ object LoadGraphTitan extends App {
         val uriTemp: String = HelperUtils.escapeURIString(triple._3)
         val uri = URI.create(uriTemp)
         var newValue: util.List[String] = explorerUrlMap.getOrElse(explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
-        newValue += uri.getHost
+        newValue += if (uri.getHost != null) uri.getHost.split("\\.").takeRight(2).mkString(".") else null
         explorerUrlMap.update(explorerId, newValue)
       } catch {
         case e: Exception => logger.warn("{}", e.getMessage)
