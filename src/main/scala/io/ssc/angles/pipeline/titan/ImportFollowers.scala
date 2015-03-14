@@ -25,13 +25,13 @@ object ImportFollowers extends App {
   var done = 0
 
   // Register indices:
-  /*  val mgmt = graph.getManagementSystem
-    var followsLabel = mgmt.getEdgeLabel("follows")
-    if (followsLabel == null) {
-      followsLabel = mgmt.makeEdgeLabel("follows").directed().make()
-      mgmt.buildEdgeIndex(followsLabel, "followIndex", Direction.BOTH)
-    }*/
-
+  val mgmt = graph.getManagementSystem
+  var followsLabel = mgmt.getEdgeLabel("follows")
+  if (followsLabel == null) {
+    followsLabel = mgmt.makeEdgeLabel("follows").directed().make()
+    /*mgmt.buildEdgeIndex(followsLabel, "followIndex", Direction.BOTH)*/
+  }
+  mgmt.commit()
 
   def getFirstElementOrNull(iterator: util.Iterator[Vertex]): Vertex = {
     if (iterator.hasNext)
@@ -43,7 +43,7 @@ object ImportFollowers extends App {
   logger.info("Reading input...")
   var lines = Source.fromFile(fileName).getLines().toList
   logger.info("Fire!")
-  
+
   var tx = graph.buildTransaction().enableBatchLoading().start()
 
 
