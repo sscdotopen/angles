@@ -161,9 +161,13 @@ object LoadGraphTitan extends App {
     mgmt.buildIndex("host_search", classOf[Vertex]).addKey(host).buildMixedIndex(INDEX_BACKEND)
     // Mixed vertex index on property "host"
     mgmt.buildIndex("host", classOf[Vertex]).addKey(host).buildCompositeIndex()
-    // Composite vertex index on property "vertexKey"
+    // Composite vertex index on property "key"
     val vertexKey = mgmt.makePropertyKey("key").dataType(classOf[String]).make()
     mgmt.buildIndex("key", classOf[Vertex]).addKey(vertexKey).buildCompositeIndex()
+
+    // Composite vertex index on property "type"
+    val typeKey = mgmt.makePropertyKey("type").dataType(classOf[String]).make()
+    mgmt.buildIndex("type", classOf[Vertex]).addKey(typeKey).buildCompositeIndex()
 
     // Composite vertex index on property "tweetedUrls"
     val tweetedUrlsKey = mgmt.makePropertyKey("tweetedUrls").dataType(classOf[Array[String]]).make()
@@ -193,7 +197,7 @@ object LoadGraphTitan extends App {
    * @param workingList List of triples to add (explorerId : String, explorerName : String, uri : String)
    * @return
    */
-  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)], jaccardClusters: ClusterSet, cosineClusters: ClusterSet) = {
+  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)], cosineClusters: ClusterSet, jaccardClusters: ClusterSet) = {
 
     // Build a map of all URLs a user has tweeted:
     val explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
@@ -263,7 +267,7 @@ object LoadGraphTitan extends App {
 
           var urlNode: Vertex = graph.getVertex(urlVertexId)
           if (urlNode == null)
-            urlNode = graph.addVertex(urlVertexId, "host", host)
+            urlNode = graph.addVertex(urlVertexId, "host", host, "type", "host")
 
           val newEdge = graph.addEdge(null, explorerNode, urlNode, "references")
           newEdge.setProperty("times", count)
