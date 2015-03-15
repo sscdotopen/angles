@@ -193,7 +193,7 @@ object LoadGraphTitan extends App {
    * @param workingList List of triples to add (explorerId : String, explorerName : String, uri : String)
    * @return
    */
-  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)], jaccardClusters: ClusterSet, cosineClusters: ClusterSet) = {
+  def addVertices(graph: BatchGraph[_ <: TransactionalGraph], workingList: Set[(String, String, String)], cosineClusters: ClusterSet, jaccardClusters: ClusterSet) = {
 
     // Build a map of all URLs a user has tweeted:
     val explorerUrlMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
