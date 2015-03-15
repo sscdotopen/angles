@@ -239,17 +239,19 @@ object LoadGraphTitan extends App {
         id.toString
       }).apply())
 
-      val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId)
+      val explorerNode = graph.addVertex(vertexId, "explorerId", explorerId, "type", "explorer")
       explorerNode.setProperty("explorerName", explorerName)
       // Find cosine cluster for explorer
       val cosineClusterIdForExplorer: util.Set[Int] = cosineClusters.getClusterIdsForExplorer(explorerName)
       if (cosineClusterIdForExplorer.size() != 0) {
-        explorerNode.setProperty("cosineCluster", cosineClusterIdForExplorer.iterator().next())
+        val cosineCluster: Int = cosineClusterIdForExplorer.iterator().next()
+        explorerNode.setProperty("cosineCluster", cosineCluster)
       }
       // Find jaccard cluster for explorer
       val jaccardClusterIdsForExplorer: util.Set[Int] = jaccardClusters.getClusterIdsForExplorer(explorerName)
       if (jaccardClusterIdsForExplorer.size() != 0) {
-        explorerNode.setProperty("jaccardCluster", jaccardClusterIdsForExplorer.iterator().next())
+        val jaccardCluster: Int = jaccardClusterIdsForExplorer.iterator().next()
+        explorerNode.setProperty("jaccardCluster", jaccardCluster)
       }
       //explorerNode.setProperty("tweetedUrls", explorerUrlMap.get(explorerId).toArray.asInstanceOf[Array[String]])
 
