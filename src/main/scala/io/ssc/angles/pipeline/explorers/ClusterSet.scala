@@ -18,9 +18,9 @@ class ClusterSet {
   private var currentClusterId = 0
 
   def addExplorerToCurrentCluster(explorer: String): Unit = {
-    clusterToValueMap.put(currentClusterId, explorer)
-    valueToClusterMap.put(explorer, currentClusterId)
-    explorerSet += explorer
+    clusterToValueMap.put(currentClusterId, explorer.toLowerCase)
+    valueToClusterMap.put(explorer.toLowerCase, currentClusterId)
+    explorerSet += explorer.toLowerCase
   }
 
   def newCluster() = {
@@ -28,7 +28,7 @@ class ClusterSet {
   }
 
   def getClusterIdsForExplorer(explorer: String): java.util.Set[Int] = {
-    valueToClusterMap.get(explorer)
+    valueToClusterMap.get(explorer.toLowerCase)
   }
 
   def getExplorers: Set[String] = {
