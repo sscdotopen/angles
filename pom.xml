@@ -241,25 +241,6 @@
             <version>0.7</version>
         </dependency>
 
-        <!-- Titan -->
-        <dependency>
-            <groupId>com.tinkerpop.blueprints</groupId>
-            <artifactId>blueprints-core</artifactId>
-            <version>2.5.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.thinkaurelius.titan</groupId>
-            <artifactId>titan-all</artifactId>
-            <version>0.5.4</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.tinkerpop.blueprints</groupId>
-            <artifactId>blueprints-rexster-graph</artifactId>
-            <version>2.5.0</version>
-        </dependency>
-
     </dependencies>
 
     <!-- END DEPENDENCIES -->
