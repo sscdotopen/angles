@@ -4,6 +4,7 @@ import java.io.File
 
 import com.google.common.collect.{HashMultimap, SetMultimap}
 import de.uni_leipzig.informatik.asv.gephi.chinesewhispers.ChineseWhispersClusterer
+import org.apache.commons.lang3.StringUtils
 import org.gephi.clustering.api.Cluster
 import org.gephi.graph.api.{Graph, GraphController, GraphFactory, Node}
 import org.gephi.io.exporter.api.ExportController
@@ -69,7 +70,7 @@ class GephiManager {
   }
 
   def exportGraphToPNGImage(filename: String, height: Int, width: Int) = {
-    val exportController = Lookup.getDefault.lookup(classOf[ExportController])
+    val exportController : ExportController = Lookup.getDefault.lookup(classOf[ExportController])
     val pngExporter: PNGExporter = exportController.getExporter("png").asInstanceOf[PNGExporter]
     pngExporter.setWorkspace(workspace)
     pngExporter.setHeight(height)
@@ -95,7 +96,7 @@ class GephiManager {
     }
     logger.info("Finished OpenOrd layout!")
   }
-  
+ 
   def runChineseWhispersClusterer() : SetMultimap[Int, String] = {
     val graphModel = Lookup.getDefault.lookup(classOf[GraphController]).getModel(workspace)
     val progressTicket = new GephiProgressTicketImpl
@@ -117,7 +118,8 @@ class GephiManager {
     
     for (cluster <- clusters) {
       for (node <- cluster.getNodes) {
-        resultMap.put(clusterId, node.getNodeData.getId)
+        val id: String = node.getNodeData.getId
+        resultMap.put(clusterId, StringUtils.strip(id, "\""))
       }
       clusterId += 1
     }

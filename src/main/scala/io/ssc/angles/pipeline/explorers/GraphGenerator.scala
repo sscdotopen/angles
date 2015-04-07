@@ -160,7 +160,7 @@ class GraphGenerator {
       while (innerCount < outerCount) {
         val (rightId, rhs) = explorerSpace(innerCount)
         val similarity: Double = similarityFunction(lhs, rhs)
-        if (similarity >= 0.5 && similarity <= 0.95)
+        if (similarity >= 0.1 && similarity <= 1.00)
           resultSet += (((leftId, rightId), similarity))
         innerCount += 1
       }
