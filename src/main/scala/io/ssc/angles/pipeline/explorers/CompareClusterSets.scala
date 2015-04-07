@@ -8,7 +8,7 @@ object CompareClusterSets extends App {
   val clusterReadWriter = new ClusterReadWriter
 
   val sourceFile = "communities_manual.tsv"
-  val targetFile = "communities_jaccard.tsv"
+  val targetFile = "communities_cosine.tsv"
 
   val sourceClusterSet = clusterReadWriter.readClusterFile(sourceFile)
   val targetClusterSet = clusterReadWriter.readClusterFile(targetFile)

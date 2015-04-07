@@ -68,6 +68,8 @@ object CalculateClusters extends App {
   }
 
   def readGraphCSV(filename: String): Map[(String, String), Double] = {
+    logger = LoggerFactory.getLogger(CalculateClusters.getClass)
+
     logger.info("Reading csv from {} ...", filename)
     // write csv output
     val path = Paths.get(filename)
@@ -85,10 +87,12 @@ object CalculateClusters extends App {
     val resultMap: MutableMap[(String, String), Double] = mutable.HashMap.empty
 
     while (line != null) {
-      val lineData = StringUtils.split(line, ",")
+      line = StringUtils.remove(line, "\"")
+      var lineData = StringUtils.split(line, ",")
       if (lineData.length != 4) {
-        throw new IllegalArgumentException("Invalid first line")
+        throw new IllegalArgumentException("Invalid line")
       }
+
 
       val left = lineData(0)
       val right = lineData(1)

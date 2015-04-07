@@ -47,7 +47,7 @@ class ClusterReadWriter {
       val clusterId: Int = t._1
       val explorerIds: util.Collection[String] = t._2
       explorerIds.foreach {
-        case explorerId: String => writer.println(explorerId)
+        case explorerId: String => writer.println(StringUtils.replace(explorerId, "\"", ""))
         case any => logger.warn("Skipping invalid value in cluster {}: {}", clusterId, any)
       }
       writer.println()

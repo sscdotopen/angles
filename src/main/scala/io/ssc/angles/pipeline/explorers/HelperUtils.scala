@@ -9,7 +9,7 @@ object HelperUtils {
 
   val toReplace = Array(" ", "|", ";", "(", ")", "[", "]", ",", "\"", "'", ":", "!", "-", "@", "{", "|", "}", "<", ">", "^", "\\")
   val replaceWith = Array("%20", "%7C", "%3B", "%28", "%29", "%5B", "%5D", "%2C", "%22", "%27", "%3A", "%21", "%2D", "%40", "%7B", "%7C", "%7D", "%3C", "%3D", "%5E", "%5C")
-  
+
   def escapeURIString(uri: String): String = {
     var uriTemp = StringUtils.trim(uri)
     if ('\"'.equals(uriTemp.charAt(0))) {
