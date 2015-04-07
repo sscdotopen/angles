@@ -26,7 +26,7 @@ class ClusterReadWriter {
     var line: String = bufferedReader.readLine()
 
     while (line != null) {
-      var trimmedLine: String = StringUtils.trim(line)
+      var trimmedLine: String = StringUtils.trim(line).toLowerCase
       if (trimmedLine.isEmpty)
         clusterSet.newCluster()
       else

@@ -28,21 +28,21 @@
         <repository>
             <id>gephi-snapshots</id>
             <name>Gephi Snapshots</name>
-            <url>http://nexus.gephi.org/nexus/content/repositories/snapshots/</url>
+            <url>https://nexus.gephi.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
             <id>gephi-releases</id>
             <name>Gephi Releases</name>
-            <url>http://nexus.gephi.org/nexus/content/repositories/releases/</url>
+            <url>https://nexus.gephi.org/nexus/content/repositories/releases/</url>
         </repository>
-        <repository>
+        <!--<repository>
             <id>rethinkjava-mvn-repo</id>
             <url>https://raw.github.com/dkhenry/rethinkjava/mvn-repo/</url>
             <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
             </snapshots>
-        </repository>
+        </repository>-->
     </repositories>
 
     <!-- DEPENDENCIES -->
@@ -204,11 +204,11 @@
             <version>3.3.2</version>
         </dependency>
 
-        <dependency>
+        <!--<dependency>
             <groupId>com.dkhenry</groupId>
             <artifactId>rethinkjava</artifactId>
             <version>0.9</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>edu.ucla.sspace</groupId>

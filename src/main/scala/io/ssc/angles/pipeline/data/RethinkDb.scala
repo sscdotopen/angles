@@ -1,3 +1,4 @@
+/*
 package io.ssc.angles.pipeline.data
 
 import com.dkhenry.RethinkDB.{RqlConnection, RqlCursor}
@@ -39,3 +40,4 @@ object RethinkDb extends App {
   }
 
 }
+*/
