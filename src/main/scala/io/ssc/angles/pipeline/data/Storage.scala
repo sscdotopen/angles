@@ -266,6 +266,12 @@ object Storage {
       insert.into(Explorer).values(user.getId, user.getScreenName, user.getName, user.getDescription)
     }.update.apply()
   }
+
+  def saveExplorer(id: String, screenName : String) = {
+    withSQL {
+      insert.into(Explorer).values(id, screenName, screenName, null)
+    }.update.apply()
+  }
   
   def allTweetURIPairs() = {
     sql"SELECT t.explorer_id, w.real_uri FROM tweets t JOIN crawled_websites w ON t.id = w.tweet_id;" map {

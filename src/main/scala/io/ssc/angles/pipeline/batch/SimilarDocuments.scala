@@ -49,11 +49,13 @@ object SimilarDocuments extends App {
     val searcher = new IndexSearcher(reader)
 
     var communityFilename: String = null
-    if (params.length > 1) {
+    if (params.length >= 1) {
       communityFilename = params(0)
     } else {
       communityFilename = "communities-manual.tsv"
     }
+
+    println("Reading communities from " + communityFilename + " ...")
 
     //  val fields = MultiFields.getFields(reader)
 
