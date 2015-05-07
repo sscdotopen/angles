@@ -22,7 +22,7 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 import io.ssc.angles.pipeline.data.{Storage, TwitterApi}
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import twitter4j.{Paging, ResponseList, Status}
+import twitter4j.{TwitterException, Paging, ResponseList, Status}
 
 import scala.collection.JavaConversions._
 
@@ -48,36 +48,46 @@ class FetchTimelines {
       steps += new Step {
         override def execute(since: DateTime): Unit = {
 
-          var statuses: ResponseList[Status] = null
-          var page = 1
+          try {
+            var statuses: ResponseList[Status] = null
+            var page = 1
 
-          do {
+            do {
 
-            val paging = if (maxTweetIdPerExplorer.contains(explorer.id)) {
-              new Paging(page, pageSize, maxTweetIdPerExplorer(explorer.id))
-            } else {
-              new Paging(page, pageSize)
-            }
-
-            log.info("Requesting page  {} of @{}", page, explorer.screenname)
-            statuses = twitterApi.timelines().getUserTimeline(explorer.id, paging)
-
-            var tweetsAdded = 0
-            for (status <- statuses) {
-              try {
-                val saved = Storage.saveTweet(status, explorer.id, fetchTime, None)
-                if (saved) {
-                  tweetsAdded += 1
-                }
-              } catch {
-                case _: MySQLIntegrityConstraintViolationException => log.warn("Error while saving retweet, duplicate?")
+              val paging = if (maxTweetIdPerExplorer.contains(explorer.id)) {
+                new Paging(page, pageSize, maxTweetIdPerExplorer(explorer.id))
+              } else {
+                new Paging(page, pageSize)
               }
-            }
 
-            log.info("Saved {} tweets", tweetsAdded)
-            page += 1
+              log.info("Requesting page  {} of @{}", page, explorer.screenname)
+              statuses = twitterApi.timelines().getUserTimeline(explorer.id, paging)
 
-          } while (statuses.size == pageSize)
+              var tweetsAdded = 0
+              for (status <- statuses) {
+                try {
+                  val saved = Storage.saveTweet(status, explorer.id, fetchTime, None)
+                  if (saved) {
+                    tweetsAdded += 1
+                  }
+                } catch {
+                  case _: MySQLIntegrityConstraintViolationException => log.warn("Error while saving retweet, duplicate?")
+                }
+              }
+
+              log.info("Saved {} tweets", tweetsAdded)
+              page += 1
+
+            } while (statuses.size == pageSize)
+          } catch {
+            case e : TwitterException =>
+              // Catch TwitterException if caused by a user who hides his timeline for the API
+              if (e.getStatusCode == 401) {
+                log.warn("Authentication error - this might indicate missing permissions to read a timeline. Check other logs for more information.", e)
+              } else {
+                throw e;
+              }
+          }
         }
       }
     }
