@@ -43,12 +43,22 @@ class GraphGenerator {
               urlMappingFunction: (URI) => String,
               similarityFunction: (RealVector, RealVector) => Double): Map[(String, String), Double] = {
 
+    val explorerSpace: Map[String, RealVector] = buildExplorerSpace(inputSet, urlMappingFunction)
+
+    // Calculate the similarity
+    val similarityPairs: Map[(String, String), Double] = calculateSimilarity(explorerSpace, similarityFunction)
+    logger.info("Calculated {} similarities", similarityPairs.size)
+
+    similarityPairs
+  }
+
+  def buildExplorerSpace(inputSet: List[ExplorerUriPair], urlMappingFunction: (URI) => String): Map[String, RealVector] = {
     // Prepare map for URI->Dimension
     val dimensionMap: Map[String, Int] = calculateDimensions(inputSet, urlMappingFunction)
     logger.info("Found {} dimensions for url mapping", dimensionMap.size)
 
     // Collect all urls for each explorer
-    val explorerUrlMap: Map[String, java.util.List[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
+    val explorerUrlMap: Map[String, util.List[String]] = calculateExplorerUrlMap(inputSet, urlMappingFunction)
 
     logger.info("Calculating IDF vector")
     // Count "df" i.e. how many users tweeted a URI
@@ -60,12 +70,7 @@ class GraphGenerator {
     // Convert to real mathematical vectors with x dimensions
     val explorerSpace: Map[String, RealVector] = buildExplorerSpace(dimensionMap, explorerUrlMap, idfVector)
     logger.info("Built vector space of {} explorers", explorerSpace.size)
-
-    // Calculate the similarity
-    val similarityPairs: Map[(String, String), Double] = calculateSimilarity(explorerSpace, similarityFunction)
-    logger.info("Calculated {} similarities", similarityPairs.size)
-
-    similarityPairs
+    explorerSpace
   }
 
   /**

@@ -19,11 +19,9 @@ import scala.collection.JavaConversions._
 object BuildExplorerGraph extends App {
   
   val csvFile = "pairs.csv"
-  
-  val clusterReadWriter = new ClusterReadWriter
 
   //val uriToHost = (uri: URI) => uri.getHost
-  val uriToSecondLevelDomain = (uri: URI) => if (uri.getHost != null) uri.getHost.split("\\.").takeRight(2).mkString(".") else null
+  def uriToSecondLevelDomain(uri: URI) = if (uri.getHost != null) uri.getHost.split("\\.").takeRight(2).mkString(".") else null
 
   val logger = LoggerFactory.getLogger(BuildExplorerGraph.getClass)
   val graphGenerator = new GraphGenerator
