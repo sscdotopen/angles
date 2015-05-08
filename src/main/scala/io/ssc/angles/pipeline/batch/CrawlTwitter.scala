@@ -56,7 +56,8 @@ object CrawlTwitter extends App {
           Thread.sleep(sleepTime * 1000)
         } else {
           // Ugh?!
-          log.error("{}", tex)
+          log.error("Unexpected exception - skipping step", tex)
+          work.dequeue()
         }
       }
     }

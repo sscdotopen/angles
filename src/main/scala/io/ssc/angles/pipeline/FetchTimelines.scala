@@ -48,7 +48,6 @@ class FetchTimelines {
       steps += new Step {
         override def execute(since: DateTime): Unit = {
 
-          try {
             var statuses: ResponseList[Status] = null
             var page = 1
 
@@ -79,15 +78,6 @@ class FetchTimelines {
               page += 1
 
             } while (statuses.size == pageSize)
-          } catch {
-            case e : TwitterException =>
-              // Catch TwitterException if caused by a user who hides his timeline for the API
-              if (e.getStatusCode == 401) {
-                log.warn("Authentication error - this might indicate missing permissions to read a timeline. Check other logs for more information.", e)
-              } else {
-                throw e;
-              }
-          }
         }
       }
     }
