@@ -30,7 +30,7 @@ class FetchTimelines {
 
   val log = LoggerFactory.getLogger(classOf[FetchTimelines])
 
-  val pageSize = 100
+  val pageSize = 200
 
   def generateSteps(since: DateTime): Set[Step] = {
     log.info("Fetching timelines ...")
