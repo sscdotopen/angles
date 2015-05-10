@@ -4,3 +4,4 @@ target/*
 src/main/resources/angles-conf.properties
 .mysql-passes
 .vagrant
+nb*.xml

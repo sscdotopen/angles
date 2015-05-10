@@ -32,8 +32,8 @@ class ClusterSet[T] {
     currentClusterId += 1
   }
 
-  def getClusterIdsForExplorer(explorer: T): java.util.Set[Int] = {
-    valueToClusterMap.get(explorer)
+  def getClusterIdsForExplorer(explorer: T): Set[Int] = {
+    valueToClusterMap.get(explorer).asScala.toSet
   }
 
   def getExplorers: Set[T] = {
@@ -50,6 +50,10 @@ class ClusterSet[T] {
 
   def getCluster(cluster: Int): Iterable[T] = {
     clusterToValueMap.asMap().get(cluster).asScala
+  }
+
+  def getClusters(): Iterable[Iterable[T]] = {
+    clusterToValueMap.asMap().entrySet().asScala.map(e => e.getValue.asScala).toIterable
   }
 
 }
