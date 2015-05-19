@@ -38,7 +38,7 @@ object CalculateClusters extends App {
     // Put each explorer without cluster in a separate cluster
     explorers.foreach{s =>
         if (!clusterMap.containsValue(s)) {
-          clusterMap.put(-1, s)
+          clusterMap.put(i, s)
           i -= 1
         }
     }
