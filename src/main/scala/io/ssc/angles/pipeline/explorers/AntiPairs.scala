@@ -31,7 +31,7 @@ object AntiPairs extends App {
     }
   }
   
-  logger.info("Checked {} anti-pairs. Found {} pairs in the same cluster.", antiPairs.size, n)
+  logger.info("Checked {} anti-pairs. Found {} pairs in the same cluster.", antiPairs.size, affected.size)
   logger.info("This is a ratio of {}%.", affected.size / antiPairs.size.toDouble * 100)
 
   if (affected.size > 0) {
