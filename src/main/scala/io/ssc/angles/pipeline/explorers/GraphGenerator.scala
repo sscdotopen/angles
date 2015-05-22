@@ -107,7 +107,7 @@ class GraphGenerator {
     var urlExplorerCount: ConcurrentHashMap[String, Int] = new ConcurrentHashMap[String, Int]
 
     // This map will contain
-    pairs.par.map((pair: ExplorerUriPair) => (uriToString(pair.uri), pair.explorerId)
+    pairs.map((pair: ExplorerUriPair) => (uriToString(pair.uri), pair.explorerId)
     ).distinct.seq.foreach {
       case (null, explorer) =>
         logger.warn("Url became null for explorer {} - check your URL mapping function", explorer)
@@ -179,7 +179,7 @@ class GraphGenerator {
   private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, java.util.List[String]], idfVector: RealVector): Map[String, RealVector] = {
     var explorerSpace: ConcurrentHashMap[String, RealVector] = new ConcurrentHashMap[String, RealVector]
 
-    explorerUrlMap.par.foreach { case tuple => {
+    explorerUrlMap.foreach { case tuple => {
       val name = tuple._1
       val urls = tuple._2
       // Convert the list representation to a mathematical vector
@@ -190,7 +190,7 @@ class GraphGenerator {
     }
     
     // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
-    explorerSpace.par.map {
+    explorerSpace.map {
       case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
     }.seq.toMap
   }
@@ -201,7 +201,7 @@ class GraphGenerator {
   private def calculateExplorerUrlMap(tweets: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, util.List[String]] = {
     var resultMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
 
-    tweets.par.foreach { case tweet => {
+    tweets.foreach { case tweet => {
       var newValue: util.List[String] = resultMap.getOrElse(tweet.explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
       newValue += tweet.mapURI(uriToString)
       resultMap.update(tweet.explorerId, newValue)
@@ -215,7 +215,7 @@ class GraphGenerator {
    * Calculate a uri-dimension map.
    */
   private def calculateDimensions(inputSet: List[ExplorerUriPair], mappingFunction: (URI) => String): Map[String, Int] = {
-    inputSet.par.map(
+    inputSet.map(
       t => mappingFunction(t.uri)
     ).distinct.zipWithIndex.seq.toMap
   }

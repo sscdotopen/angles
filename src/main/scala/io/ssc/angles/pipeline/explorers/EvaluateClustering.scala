@@ -17,7 +17,7 @@ object EvaluateClustering extends App {
   // calculate intra-cluster distance as average of all distances
   val intraClusterDistance = (x: Iterable[RealVector]) => {
     val l = x.toList
-    average((0 until l.size).par.flatMap { case i => (i + 1 until l.size).par.map { case j => l(i) getDistance l(j) } }.seq)
+    average((0 until l.size).flatMap { case i => (i + 1 until l.size).map { case j => l(i) getDistance l(j) } }.seq)
   }
 
   // calculate inter-cluster distance as distance between cluster centroids
@@ -36,8 +36,8 @@ object EvaluateClustering extends App {
                 interDistanceMeasure: (Iterable[RealVector], Iterable[RealVector]) => Double): Double = {
     logger.info("Calculating inter-cluster distance")
     val interDistance = {
-      (0 until clusters.getNumClusters).par.flatMap { case i =>
-        ((i + 1) until clusters.getNumClusters).par.map { case j =>
+      (0 until clusters.getNumClusters).flatMap { case i =>
+        ((i + 1) until clusters.getNumClusters).map { case j =>
           val measure = interDistanceMeasure(clusters.getCluster(i), clusters.getCluster(j))
           measure
         }
@@ -46,7 +46,7 @@ object EvaluateClustering extends App {
 
     logger.info("Calculating intra-cluster distance")
     val intraDistance = {
-      (0 until clusters.getNumClusters).par.map { case i =>
+      (0 until clusters.getNumClusters).map { case i =>
         intraDistanceMeasure(clusters.getCluster(i))
       }
     }.max
