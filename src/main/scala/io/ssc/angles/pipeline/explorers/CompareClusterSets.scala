@@ -5,13 +5,11 @@ package io.ssc.angles.pipeline.explorers
  */
 object CompareClusterSets extends App {
 
-  val clusterReadWriter = new ClusterReadWriter
-
   val sourceFile = "communities_manual.tsv"
   val targetFile = "communities_cosine.tsv"
 
-  val sourceClusterSet = clusterReadWriter.readClusterFile(sourceFile)
-  val targetClusterSet = clusterReadWriter.readClusterFile(targetFile)
+  val sourceClusterSet = ClusterReadWriter.readClusterFile(sourceFile)
+  val targetClusterSet = ClusterReadWriter.readClusterFile(targetFile)
 
   sourceClusterSet.getExplorers.foreach { case (explorer: String) =>
     val sourceClusters = sourceClusterSet.getClusterIdsForExplorer(explorer)

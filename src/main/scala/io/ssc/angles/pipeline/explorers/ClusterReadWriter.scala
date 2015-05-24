@@ -15,16 +15,17 @@ import scala.collection.JavaConversions._
 /**
  * Reader and writer for tsv-cluster files. Each line represents a new entry (i.e. node) one or more newlines denote a new cluster.
  */
-class ClusterReadWriter {
+object ClusterReadWriter {
 
-  val logger = LoggerFactory.getLogger(classOf[ClusterReadWriter])
+  val logger = LoggerFactory.getLogger(ClusterReadWriter.getClass)
 
-  def readClusterFile(filename: String): ClusterSet = {
+  def readClusterFile(filename: String): ClusterSet[String] = {
     val path: Path = Paths.get(filename)
     val bufferedReader = Files.newBufferedReader(path, Charset.forName("UTF-8"))
-    val clusterSet = new ClusterSet
+    val clusterSet = new ClusterSet[String]
     var line: String = bufferedReader.readLine()
 
+    clusterSet.newCluster()
     while (line != null) {
       var trimmedLine: String = StringUtils.trim(line).toLowerCase
       if (trimmedLine.isEmpty)
