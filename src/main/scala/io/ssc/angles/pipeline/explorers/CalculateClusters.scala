@@ -1,10 +1,9 @@
 package io.ssc.angles.pipeline.explorers
 
-import java.nio.file.{Files, Paths}
-
 import com.google.common.collect.SetMultimap
-import scala.io.Source
 import org.slf4j.LoggerFactory
+
+import scala.io.Source
 
 /**
  * Executable for calculating clusters.
@@ -30,11 +29,11 @@ object CalculateClusters extends App {
     var i = -1
 
     // Put each explorer without cluster in a separate cluster
-    explorers.foreach { s =>
-      if (!clusterMap.containsValue(s)) {
-        clusterMap.put(-1, s)
-        i -= 1
-      }
+    explorers.foreach{s =>
+        if (!clusterMap.containsValue(s)) {
+          clusterMap.put(i, s)
+          i -= 1
+        }
     }
   }
 
@@ -57,8 +56,10 @@ object CalculateClusters extends App {
     val gephiManager = new GephiManager
     gephiManager.loadGraphMap(graphData, false)
     gephiManager.runOpenOrdLayout()
-    val jaccardClusterMap = gephiManager.runChineseWhispersClusterer()
-    ClusterReadWriter.writeClusterFile(communityFile, jaccardClusterMap)
-    gephiManager.exportGraphToPNGImage(graphFile, 16384, 16384)
+    val clusterMap: SetMultimap[Int, String] = gephiManager.runChineseWhispersClusterer()
+    addMissingExplorers(clusterMap)
+
+    ClusterReadWriter.writeClusterFile(communityFile, clusterMap)
+    gephiManager.exportGraphToPNGImage(graphFile, 8192, 8192)
   }
 }

@@ -39,6 +39,9 @@ object AntiPairs extends App {
     affected.distinct.foreach { c => logger.info("{}", c) }
     logger.info("This is a ratio of {}%", affected.distinct.size.toDouble / clusters.getNumClusters.toDouble * 100)
   }
+
+  logger.info("Total number of single clusters: {}", clusters.getClusters().count(i => i.size == 1))
+  logger.info("Total number of non-single clusters: {}", clusters.getClusters().count(i => i.size > 1))
   
   def loadAntiFile(file: String): List[(String, String)] = {
     val path = Paths.get(file)

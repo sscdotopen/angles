@@ -14,11 +14,17 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 /**
- * Created by xolor on 11.02.15.
+ * Class for generating a similarity graph between a a set of explorers - URI pairs.
+
+ * @param lowerThreshold Minimum inclusive similarity that is allowed in the similarity graph
+ * @param upperThreshold Maximum inclusive similarity that is allowed in the similarity graph
  */
-class GraphGenerator {
+class GraphGenerator(val lowerThreshold: Double = 0.5, val upperThreshold: Double = 0.95, val disableTfIdf: Boolean = false) {
 
   val logger = LoggerFactory.getLogger(classOf[GraphGenerator])
+
+  logger.info("Created new GraphGenerator with threshold between {} and {}", lowerThreshold, upperThreshold)
+  logger.info("TF-IDF is {}", if (disableTfIdf) "DISABLED" else "ENABLED")
 
   // Sample implementation of cosine similarity
   val COSINE_SIMILARITY: (RealVector, RealVector) => Double = {
@@ -64,7 +70,8 @@ class GraphGenerator {
     // Count "df" i.e. how many users tweeted a URI
     val urlCountMap: Map[String, Int] = calculateUrlCountMap(inputSet, urlMappingFunction)
     // Calculate the IDF vector
-    val idfVector: RealVector = calculateIdfVector(explorerUrlMap, urlCountMap, dimensionMap)
+    var idfVector : RealVector = null
+    if (!disableTfIdf) { idfVector = calculateIdfVector(explorerUrlMap, urlCountMap, dimensionMap) }
 
     logger.info("Building vector space")
     // Convert to real mathematical vectors with x dimensions
@@ -107,7 +114,7 @@ class GraphGenerator {
     var urlExplorerCount: ConcurrentHashMap[String, Int] = new ConcurrentHashMap[String, Int]
 
     // This map will contain
-    pairs.map((pair: ExplorerUriPair) => (uriToString(pair.uri), pair.explorerId)
+    pairs.par.map((pair: ExplorerUriPair) => (uriToString(pair.uri), pair.explorerId)
     ).distinct.seq.foreach {
       case (null, explorer) =>
         logger.warn("Url became null for explorer {} - check your URL mapping function", explorer)
@@ -149,6 +156,7 @@ class GraphGenerator {
     }
     val futureSequence = Future.sequence(futures)
     Await.result(futureSequence, Duration.Inf)
+    logger.info("Finished graph generation")
     resultSet.toMap
   }
 
@@ -165,7 +173,7 @@ class GraphGenerator {
       while (innerCount < outerCount) {
         val (rightId, rhs) = explorerSpace(innerCount)
         val similarity: Double = similarityFunction(lhs, rhs)
-        if (similarity >= 0.1 && similarity <= 1.00)
+        if (similarity >= lowerThreshold && similarity <= upperThreshold)
           resultSet += (((leftId, rightId), similarity))
         innerCount += 1
       }
@@ -179,7 +187,7 @@ class GraphGenerator {
   private def buildExplorerSpace(dimensionMap: Map[String, Int], explorerUrlMap: Map[String, java.util.List[String]], idfVector: RealVector): Map[String, RealVector] = {
     var explorerSpace: ConcurrentHashMap[String, RealVector] = new ConcurrentHashMap[String, RealVector]
 
-    explorerUrlMap.foreach { case tuple => {
+    explorerUrlMap.par.foreach { case tuple => {
       val name = tuple._1
       val urls = tuple._2
       // Convert the list representation to a mathematical vector
@@ -188,11 +196,15 @@ class GraphGenerator {
       explorerSpace += ((name, vector))
     }
     }
-    
-    // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
-    explorerSpace.map {
-      case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
-    }.seq.toMap
+
+    if (disableTfIdf) {
+      explorerSpace.seq.toMap
+    } else {
+      // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
+      explorerSpace.par.map {
+        case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
+      }.seq.toMap
+    }
   }
 
   /**
@@ -201,7 +213,7 @@ class GraphGenerator {
   private def calculateExplorerUrlMap(tweets: List[ExplorerUriPair], uriToString: (URI) => String): Map[String, util.List[String]] = {
     var resultMap: ConcurrentHashMap[String, java.util.List[String]] = new ConcurrentHashMap[String, java.util.List[String]]
 
-    tweets.foreach { case tweet => {
+    tweets.par.foreach { case tweet => {
       var newValue: util.List[String] = resultMap.getOrElse(tweet.explorerId, Collections.synchronizedList(new util.ArrayList[String]()))
       newValue += tweet.mapURI(uriToString)
       resultMap.update(tweet.explorerId, newValue)
@@ -215,7 +227,7 @@ class GraphGenerator {
    * Calculate a uri-dimension map.
    */
   private def calculateDimensions(inputSet: List[ExplorerUriPair], mappingFunction: (URI) => String): Map[String, Int] = {
-    inputSet.map(
+    inputSet.par.map(
       t => mappingFunction(t.uri)
     ).distinct.zipWithIndex.seq.toMap
   }
