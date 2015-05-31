@@ -8,29 +8,47 @@ import java.util.Locale
 import com.google.common.collect.{BiMap, HashBiMap, HashMultimap, SetMultimap}
 import edu.ucla.sspace.graph.{ChineseWhispersClustering, Graphs, SimpleWeightedEdge, SparseUndirectedGraph}
 import edu.ucla.sspace.util.MultiMap
+import org.apache.commons.lang3.math.NumberUtils
 import org.apache.commons.math3.linear.RealVector
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 
 /**
- * Created by xolor on 11.02.15.
+ * Application for building similarity graphs. This will read explorer-URI pairs from pairs.csv and will write the
+ * results to graph_cosine.csv and graph_jaccard.csv.
+ *
+ * You can additionally define three parameters:
+ *  - lower threshold for similarity in the graph (default value: 0.5)
+ *  - upper threshold for similarity in the graph (default value: 0.95)
+ *  - any third parameter will DISABLE tf-idf on vector space calculation!
  */
 object BuildExplorerGraph extends App {
-  
+
   val csvFile = "pairs.csv"
 
   //val uriToHost = (uri: URI) => uri.getHost
   def uriToSecondLevelDomain(uri: URI) = if (uri.getHost != null) uri.getHost.split("\\.").takeRight(2).mkString(".") else null
 
   val logger = LoggerFactory.getLogger(BuildExplorerGraph.getClass)
-  val graphGenerator = new GraphGenerator
+
+  var lowerThreshold = 0.5
+  var upperThreshold = 0.95
+
+  if (args.length >= 2) {
+    lowerThreshold = NumberUtils.createDouble(args(0))
+    upperThreshold = NumberUtils.createDouble(args(1))
+  }
+
+  val disableTfIdf = args.length >= 3
+
+  val graphGenerator = new GraphGenerator(lowerThreshold, upperThreshold, disableTfIdf)
 
   logger.info("Querying datastore...")
 
   val workingList: List[ExplorerUriPair] = CSVReader.readExplorerPairsFromCSV(csvFile)
   logger.info("Got {} pairs from CSV", workingList.size)
-  
+
   // Build graph with cosine similarity function
   logger.info("Preparing graph with cosine similarity")
   val cosineGraph = buildGraph(uriToSecondLevelDomain, graphGenerator.COSINE_SIMILARITY)
@@ -61,7 +79,7 @@ object BuildExplorerGraph extends App {
         vertexCount += 1
         vertexCount
       })())
-      // Add edge to graph                                                                         gi
+      // Add edge to graph
       graph.add(new SimpleWeightedEdge(leftVertexId, rightVertexId, weight))
     }
     }
@@ -91,9 +109,9 @@ object BuildExplorerGraph extends App {
 
   def buildGraph(uriToString: (URI => String), similarityFunction: ((RealVector, RealVector) => Double)): Map[(String, String), Double] = {
     logger.info("Invoking graph builder...")
-    
+
     val startTime = System.currentTimeMillis()
-    val graph = new GraphGenerator().execute(workingList, uriToString, similarityFunction)
+    val graph = graphGenerator.execute(workingList, uriToString, similarityFunction)
     val endTime = System.currentTimeMillis()
 
     logger.info("Graph generation finished within {} ms!", endTime - startTime)

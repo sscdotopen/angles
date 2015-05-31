@@ -14,11 +14,17 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 /**
- * Created by xolor on 11.02.15.
+ * Class for generating a similarity graph between a a set of explorers - URI pairs.
+
+ * @param lowerThreshold Minimum inclusive similarity that is allowed in the similarity graph
+ * @param upperThreshold Maximum inclusive similarity that is allowed in the similarity graph
  */
-class GraphGenerator {
+class GraphGenerator(val lowerThreshold: Double = 0.5, val upperThreshold: Double = 0.95, val disableTfIdf: Boolean = false) {
 
   val logger = LoggerFactory.getLogger(classOf[GraphGenerator])
+
+  logger.info("Created new GraphGenerator with threshold between {} and {}", lowerThreshold, upperThreshold)
+  logger.info("TF-IDF is {}", if (disableTfIdf) "DISABLED" else "ENABLED")
 
   // Sample implementation of cosine similarity
   val COSINE_SIMILARITY: (RealVector, RealVector) => Double = {
@@ -64,7 +70,8 @@ class GraphGenerator {
     // Count "df" i.e. how many users tweeted a URI
     val urlCountMap: Map[String, Int] = calculateUrlCountMap(inputSet, urlMappingFunction)
     // Calculate the IDF vector
-    val idfVector: RealVector = calculateIdfVector(explorerUrlMap, urlCountMap, dimensionMap)
+    var idfVector : RealVector = null
+    if (!disableTfIdf) { idfVector = calculateIdfVector(explorerUrlMap, urlCountMap, dimensionMap) }
 
     logger.info("Building vector space")
     // Convert to real mathematical vectors with x dimensions
@@ -149,6 +156,7 @@ class GraphGenerator {
     }
     val futureSequence = Future.sequence(futures)
     Await.result(futureSequence, Duration.Inf)
+    logger.info("Finished graph generation")
     resultSet.toMap
   }
 
@@ -165,7 +173,7 @@ class GraphGenerator {
       while (innerCount < outerCount) {
         val (rightId, rhs) = explorerSpace(innerCount)
         val similarity: Double = similarityFunction(lhs, rhs)
-        if (similarity >= 0.1 && similarity <= 1.00)
+        if (similarity >= lowerThreshold && similarity <= upperThreshold)
           resultSet += (((leftId, rightId), similarity))
         innerCount += 1
       }
@@ -188,11 +196,15 @@ class GraphGenerator {
       explorerSpace += ((name, vector))
     }
     }
-    
-    // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
-    explorerSpace.par.map {
-      case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
-    }.seq.toMap
+
+    if (disableTfIdf) {
+      explorerSpace.seq.toMap
+    } else {
+      // Use TF-IDF for feature extraction -> i.e. TF is number of urls for each user and IDF is number of users that tweeted a URL
+      explorerSpace.par.map {
+        case (s: String, v: RealVector) => (s, v.ebeMultiply(idfVector))
+      }.seq.toMap
+    }
   }
 
   /**
