@@ -69,7 +69,7 @@ object AntiPairs extends App {
       val cluster1 = clusters.getClusterIdsForExplorer(p._1)
       val cluster2 = clusters.getClusterIdsForExplorer(p._2)
       if (cluster1 == cluster2 && !cluster1.isEmpty) {
-                logger.warn("{} and {} are both in cluster {} {} {}", p._1, p._2, cluster1, cluster2)
+//                logger.warn("{} and {} are both in cluster {} {} {}", p._1, p._2, cluster1, cluster2)
         affected += cluster1.toString
       }
     }
