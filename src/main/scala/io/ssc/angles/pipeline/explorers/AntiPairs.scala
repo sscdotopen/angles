@@ -1,3 +1,20 @@
+/**
+ * Angles
+ * Copyright (C) 2015 Jakob Hendeß, Niklas Wolber
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package io.ssc.angles.pipeline.explorers
 
 import java.nio.charset.Charset
@@ -20,7 +37,7 @@ object AntiPairs extends App {
 
   logger.info("Loading cluster file")
   val clusters = ClusterReadWriter.readClusterFile(clustersFile)
-  logger.info("Got {} clusters from CSV", clusters.getNumClusters)
+  logger.info("Got {} clusters with {} explorers from CSV", clusters.getNumClusters, clusters.getExplorers.size)
 
   val nonSingleClusters = new ClusterSet[String]
 
@@ -33,7 +50,7 @@ object AntiPairs extends App {
     }
   }
 
-  logger.info("Got {} non-single clusters", nonSingleClusters.getNumClusters)
+  logger.info("Got {} non-single clusters with {} explorers", nonSingleClusters.getNumClusters, nonSingleClusters.getExplorers.size)
 
   val affected = getAffectedClusters(clusters, antiPairs)
 

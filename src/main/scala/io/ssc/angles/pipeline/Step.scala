@@ -1,6 +1,6 @@
 /**
  * Angles
- * Copyright (C) 2014  Sebastian Schelter
+ * Copyright (C) 2015 Jakob Hendeß, Niklas Wolber
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
