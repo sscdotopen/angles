@@ -15,12 +15,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package io.ssc.angles.pipeline.explorers
 
-package io.ssc.angles.pipeline
+import java.net.URI
 
-import org.joda.time.DateTime
+class ExplorerUriPair (val explorerId : String, val uri : URI) {
 
-trait Step {
-
-  def execute(since: DateTime): Unit
+  def mapURI(f : (URI) => String) : String = f(uri)
+  
+  def this(explorerId : String, uri : String) = {
+    this(explorerId, URI.create(uri))
+  }
+  
 }

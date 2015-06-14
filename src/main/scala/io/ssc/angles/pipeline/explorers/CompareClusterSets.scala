@@ -15,12 +15,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package io.ssc.angles.pipeline.explorers
 
-package io.ssc.angles.pipeline
+object CompareClusterSets extends App {
 
-import org.joda.time.DateTime
+  val sourceFile = "communities_manual.tsv"
+  val targetFile = "communities_cosine.tsv"
 
-trait Step {
+  val sourceClusterSet = ClusterReadWriter.readClusterFile(sourceFile)
+  val targetClusterSet = ClusterReadWriter.readClusterFile(targetFile)
 
-  def execute(since: DateTime): Unit
+  sourceClusterSet.getExplorers.foreach { case (explorer: String) =>
+    val sourceClusters = sourceClusterSet.getClusterIdsForExplorer(explorer)
+    val targetClusters = targetClusterSet.getClusterIdsForExplorer(explorer)
+
+    printf("%s FROM %s TO %s\n", explorer, sourceClusters, targetClusters)
+  }
+
+
 }

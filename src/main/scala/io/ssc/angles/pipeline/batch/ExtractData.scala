@@ -1,6 +1,6 @@
 /**
  * Angles
- * Copyright (C) 2015 Jakob Hendeß, Niklas Wolber
+ * Copyright (C) 2014  Sebastian Schelter
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package io.ssc.angles.pipeline.batch
 
-package io.ssc.angles.pipeline
-
+import io.ssc.angles.Config
+import io.ssc.angles.pipeline._
 import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 
-trait Step {
+object ExtractData extends App {
+  val log = LoggerFactory.getLogger(UpdateStoryIndex.getClass)
 
-  def execute(since: DateTime): Unit
+  val since = new DateTime().minusDays(Config.property("angles.extractData.sinceDays").toInt)
+  new CrawlUris().execute(since)
+  new ExtractMetadata().execute(since)
+  new ExtractNamedEntities().execute(since)
+  new MarkGermanTweets().execute(since)
 }
